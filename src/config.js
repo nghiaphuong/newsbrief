@@ -18,8 +18,8 @@ module.exports = {
   sessionSecret: env('SESSION_SECRET', 'dev-secret-change-me'),
   anthropic: {
     key: env('ANTHROPIC_API_KEY'),
-    model: env('ANTHROPIC_MODEL', 'claude-sonnet-4-6'),
-    modelFast: env('ANTHROPIC_MODEL_FAST', env('ANTHROPIC_MODEL', 'claude-sonnet-4-6')),
+    model: env('ANTHROPIC_MODEL', 'claude-sonnet-5-5'),
+    modelFast: env('ANTHROPIC_MODEL_FAST', 'claude-haiku-5-5'),
   },
   smtp: {
     host: env('SMTP_HOST', 'smtp.gmail.com'),

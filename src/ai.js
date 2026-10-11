@@ -3,7 +3,9 @@ const config = require('./config');
 
 const API_URL = 'https://api.anthropic.com/v1/messages';
 
-async function callClaude({ system, user, model, maxTokens = 4000, temperature = 0.2 }) {
+// Sonnet 5.5 / Haiku 5.5: không nhận temperature khác mặc định (lỗi 400); thinking luôn bật và
+// dùng chung max_tokens với câu trả lời, nên max_tokens cần dư. effort: low|medium|high (bỏ trống = mặc định của model).
+async function callClaude({ system, user, model, maxTokens = 8000, effort }) {
   if (!config.anthropic.key) throw new Error('Chưa cấu hình ANTHROPIC_API_KEY');
   let lastErr;
   for (let attempt = 0; attempt < 4; attempt++) {
@@ -18,7 +20,7 @@ async function callClaude({ system, user, model, maxTokens = 4000, temperature =
         body: JSON.stringify({
           model: model || config.anthropic.model,
           max_tokens: maxTokens,
-          temperature,
+          ...(effort ? { output_config: { effort } } : {}),
           system,
           messages: [{ role: 'user', content: user }],
         }),
@@ -30,6 +32,8 @@ async function callClaude({ system, user, model, maxTokens = 4000, temperature =
       }
       const data = await res.json();
       if (!res.ok) throw new Error(`Claude API ${res.status}: ${data?.error?.message || JSON.stringify(data)}`);
+      if (data.stop_reason === 'refusal') throw new Error(`Claude từ chối xử lý (${data.stop_details?.category || 'không rõ lý do'})`);
+      if (data.stop_reason === 'max_tokens') console.warn(`Claude API: phản hồi bị cắt do chạm max_tokens=${maxTokens}`);
       return (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
     } catch (e) {
       lastErr = e;
@@ -75,7 +79,7 @@ Thứ tự ưu tiên (điểm cao → thấp):
 - Văn hóa – xã hội: điểm thấp hơn, trừ khi liên quan Việt Nam/cộng đồng người Việt.
 Loại bỏ: thể thao, giải trí, tai nạn/hình sự địa phương, thời tiết, quảng cáo, tin không liên quan.
 Trả về DUY NHẤT một mảng JSON, mỗi phần tử: {"i": số thứ tự, "score": 0-100, "category": "chinh-tri"|"kinh-te"|"van-hoa-xa-hoi", "relations": "chuỗi ngắn các cặp/nhóm liên quan, vd: Na Uy-Việt Nam; Na Uy-EU", "reason": "lý do ngắn bằng tiếng Việt"}.`;
-  const text = await callClaude({ system, user: `Danh sách tin ứng viên:\n${list}`, model: config.anthropic.modelFast, maxTokens: 6000, temperature: 0 });
+  const text = await callClaude({ system, user: `Danh sách tin ứng viên:\n${list}`, model: config.anthropic.modelFast, maxTokens: 12000, effort: 'low' });
   return parseJsonLoose(text);
 }
 
@@ -102,7 +106,7 @@ Hãy trả lời đúng theo định dạng sau, không thêm gì ngoài các th
 <translation>Bản dịch ĐẦY ĐỦ, trung thành toàn bộ văn bản nguồn sang tiếng Việt, giữ cấu trúc đoạn. Không lược bỏ câu nào chứa số liệu.</translation>
 <tin_a>Tin A tóm tắt bằng tiếng Việt theo mẫu.</tin_a>
 <key_figures>Mảng JSON các số liệu/phân tích định lượng có trong bài: [{"figure":"giá trị kèm đơn vị","context":"nội dung bằng tiếng Việt","source":"nguồn của số liệu theo bài, hoặc tên báo nếu bài không nêu","type":"thực tế|dự báo|ước tính"}]. Trả [] nếu không có.</key_figures>`;
-  const text = await callClaude({ system, user, maxTokens: 16000 });
+  const text = await callClaude({ system, user, maxTokens: 24000, effort: 'medium' });
   let figures = [];
   try { figures = parseJsonLoose(tag(text, 'key_figures') || '[]'); } catch { figures = []; }
   const translation = tag(text, 'translation');
@@ -133,7 +137,7 @@ async function dailyDigest(dateLabel, articles, length = 'short') {
   const system = `${CORE_RULES}
 Nhiệm vụ: viết BẢN TỔNG HỢP TIN TRONG NGÀY bằng tiếng Việt từ các tin A đã có.
 Yêu cầu: tiêu đề "Tổng hợp tin ngày ${dateLabel}"; sắp xếp theo thứ tự: Quan hệ Na Uy – Việt Nam/ASEAN → Chính trị – đối ngoại → Kinh tế → Văn hóa – xã hội. Mỗi tin là 1 đoạn ngắn gọn (2–4 câu), giữ số liệu then chốt kèm nguồn, cuối đoạn ghi nguồn báo trong ngoặc kèm số thứ tự tin, vd: "(NRK) [3]". Có thể gộp các tin cùng sự kiện vào một đoạn. Tổng độ dài ${LENGTHS[length] || LENGTHS.short}; nếu quá nhiều tin thì gộp/lược tin ít quan trọng nhưng không bỏ số liệu then chốt. Không dùng thông tin ngoài danh sách.`;
-  return callClaude({ system, user: `Các tin trong ngày:\n\n${articlesBlock(articles)}`, maxTokens: 5000 });
+  return callClaude({ system, user: `Các tin trong ngày:\n\n${articlesBlock(articles)}`, maxTokens: 12000 });
 }
 
 // ---------- 4. Tổng hợp theo chủ đề ----------
@@ -141,14 +145,14 @@ async function topicDigest(topic, dateFrom, dateTo, articles, length = 'medium')
   const system = `${CORE_RULES}
 Nhiệm vụ: viết BÀI TỔNG HỢP THEO CHỦ ĐỀ "${topic}" giai đoạn ${dateFrom} – ${dateTo}, bằng tiếng Việt, văn phong báo cáo của cơ quan đại diện ngoại giao.
 Cấu trúc: tiêu đề; 1 đoạn khái quát; các ý chính theo diễn biến thời gian hoặc theo nhóm vấn đề; mục "Số liệu đáng chú ý" liệt kê đầy đủ số liệu kèm nguồn; 1 đoạn nhận định ngắn về tác động đối với Na Uy/Việt Nam/ASEAN — CHỈ dựa trên nội dung các tin và ghi rõ đây là nhận định tổng hợp. Mỗi ý dẫn số thứ tự tin nguồn, vd: [2][5]. Độ dài ${LENGTHS[length] || LENGTHS.medium}. Nếu các tin không đủ thông tin về chủ đề, nói rõ điều đó thay vì suy diễn.`;
-  return callClaude({ system, user: `Các tin liên quan:\n\n${articlesBlock(articles)}`, maxTokens: 7000 });
+  return callClaude({ system, user: `Các tin liên quan:\n\n${articlesBlock(articles)}`, maxTokens: 16000 });
 }
 
 // ---------- 5. Lời dẫn tổng hợp tuần ----------
 async function weeklyOverview(label, articles) {
   const system = `${CORE_RULES}
 Viết phần "Tổng quan tuần ${label}" (khoảng 1 trang A4) bằng tiếng Việt: các điểm nổi bật về quan hệ Na Uy – Việt Nam/ASEAN, chính trị – đối ngoại, kinh tế – đầu tư – thương mại, văn hóa – xã hội; nêu số liệu then chốt kèm nguồn; dẫn số thứ tự tin [n].`;
-  return callClaude({ system, user: articlesBlock(articles), maxTokens: 5000 });
+  return callClaude({ system, user: articlesBlock(articles), maxTokens: 12000 });
 }
 
 module.exports = { callClaude, scoreCandidates, processArticle, dailyDigest, topicDigest, weeklyOverview, LENGTHS };
