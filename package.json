@@ -1,0 +1,26 @@
+{
+  "name": "newsbrief",
+  "version": "1.0.0",
+  "description": "NewsBrief – Bản tin đối ngoại tự động Na Uy · Việt Nam · ASEAN (Node.js + MySQL + Claude API)",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "build": "echo \"No build step\"",
+    "migrate": "node src/migrate-cli.js",
+    "run-now": "node src/run-cli.js"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@mozilla/readability": "^0.5.0",
+    "cookie-parser": "^1.4.7",
+    "docx": "^9.0.2",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "jsdom": "^25.0.1",
+    "mysql2": "^3.11.3",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.15",
+    "rss-parser": "^3.13.0"
+  }
+}
