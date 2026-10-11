@@ -1,49 +1,36 @@
 // Mọi lời gọi Claude API tập trung tại đây.
+const Anthropic = require('@anthropic-ai/sdk').default;
 const config = require('./config');
 
-const API_URL = 'https://api.anthropic.com/v1/messages';
+let client;
+function getClient() {
+  if (!config.anthropic.key) throw new Error('Chưa cấu hình ANTHROPIC_API_KEY');
+  // SDK tự thử lại (429, 5xx, lỗi mạng) với backoff; timeout rộng cho bài dài.
+  if (!client) client = new Anthropic({ apiKey: config.anthropic.key, maxRetries: 4, timeout: 20 * 60 * 1000 });
+  return client;
+}
 
+// Dùng streaming để kết nối không bị ngắt khi Claude viết lâu (bài dịch dài).
 // Sonnet 5.5 / Haiku 5.5: không nhận temperature khác mặc định (lỗi 400); thinking luôn bật và
 // dùng chung max_tokens với câu trả lời, nên max_tokens cần dư. effort: low|medium|high (bỏ trống = mặc định của model).
 async function callClaude({ system, user, model, maxTokens = 8000, effort }) {
-  if (!config.anthropic.key) throw new Error('Chưa cấu hình ANTHROPIC_API_KEY');
-  let lastErr;
-  for (let attempt = 0; attempt < 4; attempt++) {
-    try {
-      const res = await fetch(API_URL, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'x-api-key': config.anthropic.key,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: model || config.anthropic.model,
-          max_tokens: maxTokens,
-          ...(effort ? { output_config: { effort } } : {}),
-          system,
-          messages: [{ role: 'user', content: user }],
-        }),
-      });
-      if (res.status === 429 || res.status >= 500) {
-        lastErr = new Error(`Claude API ${res.status}`);
-        await sleep(2000 * Math.pow(2, attempt));
-        continue;
-      }
-      const data = await res.json();
-      if (!res.ok) throw new Error(`Claude API ${res.status}: ${data?.error?.message || JSON.stringify(data)}`);
-      if (data.stop_reason === 'refusal') throw new Error(`Claude từ chối xử lý (${data.stop_details?.category || 'không rõ lý do'})`);
-      if (data.stop_reason === 'max_tokens') console.warn(`Claude API: phản hồi bị cắt do chạm max_tokens=${maxTokens}`);
-      return (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
-    } catch (e) {
-      lastErr = e;
-      if (attempt < 3) await sleep(2000 * Math.pow(2, attempt));
-    }
+  let msg;
+  try {
+    msg = await getClient().messages.stream({
+      model: model || config.anthropic.model,
+      max_tokens: maxTokens,
+      ...(effort ? { output_config: { effort } } : {}),
+      system,
+      messages: [{ role: 'user', content: user }],
+    }).finalMessage();
+  } catch (e) {
+    if (e instanceof Anthropic.APIError) throw new Error(`Claude API ${e.status ?? ''}: ${e.error?.error?.message || e.message}`);
+    throw e;
   }
-  throw lastErr;
+  if (msg.stop_reason === 'refusal') throw new Error(`Claude từ chối xử lý (${msg.stop_details?.category || 'không rõ lý do'})`);
+  if (msg.stop_reason === 'max_tokens') console.warn(`Claude API: phản hồi bị cắt do chạm max_tokens=${maxTokens}`);
+  return msg.content.filter(b => b.type === 'text').map(b => b.text).join('\n');
 }
-
-const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 function tag(text, name) {
   const m = text.match(new RegExp(`<${name}>([\\s\\S]*?)</${name}>`, 'i'));
