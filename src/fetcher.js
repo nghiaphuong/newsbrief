@@ -95,7 +95,8 @@ async function fetchGdelt(log, timespan = '1d') {
 }
 
 async function collectCandidates(log, sinceHours = 30) {
-  const sources = await q('SELECT * FROM sources WHERE enabled = 1');
+  // Nguồn thu phí không cho đọc toàn văn nên bỏ qua hẳn.
+  const sources = await q('SELECT * FROM sources WHERE enabled = 1 AND paywall = 0');
   const [rss, gd] = await Promise.all([fetchRss(sources, sinceHours, log), fetchGdelt(log)]);
   const all = [...rss, ...gd];
   // Khử trùng lặp theo URL và tiêu đề; bỏ bài đã có trong CSDL

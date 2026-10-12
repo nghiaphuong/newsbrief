@@ -308,11 +308,12 @@ async function doSearch() {
 // ---------- Cài đặt ----------
 async function loadSettings() {
   const s = await api('/settings');
-  state.mode = s.ai_mode || 'api';
+  state.mode = s.ai_mode || 'claude_plan';
   $$('#stMode input[name="ai_mode"]').forEach(r => r.checked = r.value === state.mode);
-  $('#stProvider').value = s.translate_provider || 'deepl';
   state.env = s.env || {};
   showEnvHints();
+  const u = s.translate_usage;
+  $('#stUsage').textContent = u ? `Tháng ${u.period} (giờ Thái Bình Dương): đã dùng ${u.used.toLocaleString('vi-VN')} / ${u.limit.toLocaleString('vi-VN')} ký tự. Làm mới lúc ${u.resetAtOslo} (giờ Oslo).` : '';
   $('#stN').value = s.articles_per_day; $('#stHour').value = s.daily_hour; $('#stMin').value = s.min_relevance;
   $('#stMail').value = s.weekly_to; $('#stWeekly').checked = s.weekly_enabled === '1'; $('#stSamples').value = s.tin_a_samples || '';
   const d = new Date(state.today + 'T12:00:00Z'); const dow = (d.getUTCDay() + 6) % 7;
@@ -325,17 +326,13 @@ function showEnvHints() {
   const hint = (el, ok, okText, missText) => { el.className = ok ? 'ok' : 'missing'; el.textContent = ok ? okText : missText; };
   hint($('#stMode [data-env="anthropic"]'), env.anthropic, '✓ Đã có ANTHROPIC_API_KEY', '⚠ Chưa đặt ANTHROPIC_API_KEY trên server');
   hint($('#stMode [data-env="agent"]'), env.agent, '✓ Đã có AGENT_API_TOKEN', '⚠ Chưa đặt AGENT_API_TOKEN trên server');
-  const p = $('#stProvider').value;
-  hint($('#stMode [data-env="translate"]'), p === 'google' ? env.google : env.deepl,
-    p === 'google' ? '✓ Đã có GOOGLE_TRANSLATE_API_KEY' : '✓ Đã có DEEPL_API_KEY',
-    p === 'google' ? '⚠ Chưa đặt GOOGLE_TRANSLATE_API_KEY trên server' : '⚠ Chưa đặt DEEPL_API_KEY trên server');
+  hint($('#stMode [data-env="translate"]'), env.google, '✓ Đã có GOOGLE_TRANSLATE_API_KEY', '⚠ Chưa đặt GOOGLE_TRANSLATE_API_KEY trên server');
 }
-$('#stProvider').onchange = showEnvHints;
 
 $('#settingsForm').addEventListener('submit', async e => {
   e.preventDefault();
-  const mode = $('#stMode input[name="ai_mode"]:checked')?.value || 'api';
-  await api('/settings', { method: 'PUT', body: { ai_mode: mode, translate_provider: $('#stProvider').value, articles_per_day: $('#stN').value, daily_hour: $('#stHour').value, min_relevance: $('#stMin').value, weekly_to: $('#stMail').value, weekly_enabled: $('#stWeekly').checked ? '1' : '0', tin_a_samples: $('#stSamples').value } });
+  const mode = $('#stMode input[name="ai_mode"]:checked')?.value || 'claude_plan';
+  await api('/settings', { method: 'PUT', body: { ai_mode: mode, articles_per_day: $('#stN').value, daily_hour: $('#stHour').value, min_relevance: $('#stMin').value, weekly_to: $('#stMail').value, weekly_enabled: $('#stWeekly').checked ? '1' : '0', tin_a_samples: $('#stSamples').value } });
   state.mode = mode;
   $('#stSaved').textContent = 'Đã lưu.'; setTimeout(() => $('#stSaved').textContent = '', 2500);
 });
@@ -348,7 +345,7 @@ $('#wSend').onclick = async e => {
 };
 async function loadSources() {
   const rows = await api('/sources');
-  $('#srcTable').innerHTML = `<tr><th>Bật</th><th>Nguồn</th><th>Ngôn ngữ</th><th>Thu phí</th><th>Lọc từ khóa</th><th>Tình trạng</th><th></th></tr>` + rows.map(s => `
+  $('#srcTable').innerHTML = `<tr><th>Bật</th><th>Nguồn</th><th>Ngôn ngữ</th><th title="Nguồn thu phí bị bỏ qua vì không đọc được toàn văn">Thu phí (bỏ qua)</th><th>Lọc từ khóa</th><th>Tình trạng</th><th></th></tr>` + rows.map(s => `
     <tr data-id="${s.id}"><td><input type="checkbox" data-f="enabled" ${s.enabled ? 'checked' : ''}></td>
     <td><strong>${esc(s.name)}</strong><br><small>${esc(s.url)}</small></td><td>${s.lang === 'no' ? 'Na Uy' : 'Anh'}</td>
     <td><input type="checkbox" data-f="paywall" ${s.paywall ? 'checked' : ''}></td><td><input type="checkbox" data-f="filter_keywords" ${s.filter_keywords ? 'checked' : ''}></td>

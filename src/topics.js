@@ -3,7 +3,7 @@ const { q, getSettings } = require('./db');
 const ai = require('./ai');
 const { gdeltSearch, extractArticle, hash, domainOf } = require('./fetcher');
 const { ymd, addDays, toMysql } = require('./util');
-const { processOne, modeOf } = require('./pipeline');
+const { processOne, modeOf, FULL_TEXT_MIN } = require('./pipeline');
 const { compileDigest } = require('./heuristic');
 
 function parseFigs(a) { a.key_figures = typeof a.key_figures === 'string' ? JSON.parse(a.key_figures || '[]') : (a.key_figures || []); return a; }
@@ -37,10 +37,10 @@ async function scanFresh(topic, days, log) {
     if (ex.length) continue;
     try {
       const { text } = await extractArticle(c.url);
-      if (!text || text.length < 600) continue;
+      if (!text || text.length < FULL_TEXT_MIN) continue; // chỉ nhận bài đọc được toàn văn
       const bd = c.published && !isNaN(c.published) ? ymd(c.published) : ymd();
       const r = await q(`INSERT IGNORE INTO articles (url, url_hash, source_name, source_domain, lang, title_original, published_at, brief_date, content_original, full_text, relevance, relevance_reason)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`, [c.url.slice(0, 690), hash(c.url), c.source, domainOf(c.url), c.lang, c.title.slice(0, 590), toMysql(c.published), bd, text, text.length > 1500 ? 1 : 0, 50, `Tìm theo chủ đề: ${topic}`.slice(0, 490)]);
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`, [c.url.slice(0, 690), hash(c.url), c.source, domainOf(c.url), c.lang, c.title.slice(0, 590), toMysql(c.published), bd, text, 1, 50, `Tìm theo chủ đề: ${topic}`.slice(0, 490)]);
       if (!r.insertId) continue;
       const a = (await q('SELECT * FROM articles WHERE id = ?', [r.insertId]))[0];
       await processOne(a, settings);

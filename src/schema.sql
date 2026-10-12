@@ -60,6 +60,13 @@ CREATE TABLE IF NOT EXISTS digests (
   INDEX idx_kind_date (kind, brief_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Số ký tự đã gửi Google Translate theo tháng tính phí của Google (giờ Thái Bình Dương)
+CREATE TABLE IF NOT EXISTS translate_usage (
+  period CHAR(7) PRIMARY KEY,
+  chars INT UNSIGNED NOT NULL DEFAULT 0,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS runs (
   id INT AUTO_INCREMENT PRIMARY KEY,
   kind VARCHAR(30) NOT NULL,

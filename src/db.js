@@ -24,8 +24,8 @@ const DEFAULT_SETTINGS = {
   min_relevance: '45',
   weekly_enabled: '1',
   weekly_to: config.weeklyTo,
-  ai_mode: 'api',            // api | claude_plan | free
-  translate_provider: 'deepl', // deepl | google (chế độ free)
+  // api | claude_plan | free. Mặc định claude_plan: rẻ nhất khi đã có gói Claude Team/Pro (không phát sinh phí thêm).
+  ai_mode: 'claude_plan',
 };
 
 // Nâng cấp CSDL đã tạo từ phiên bản cũ (chỉ chạy khi còn thiếu).

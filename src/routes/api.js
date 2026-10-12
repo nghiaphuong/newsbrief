@@ -4,6 +4,7 @@ const { q, getSettings, setSetting } = require('../db');
 const auth = require('../auth');
 const pipeline = require('../pipeline');
 const agent = require('../agent');
+const translator = require('../translator');
 const { topicSummary } = require('../topics');
 const weekly = require('../weekly');
 const scheduler = require('../scheduler');
@@ -172,18 +173,22 @@ r.post('/weekly/send', wrap(async (req, res) => {
 }));
 
 // ---------- Cài đặt & nguồn ----------
-const EDITABLE = ['articles_per_day', 'daily_hour', 'min_relevance', 'weekly_enabled', 'weekly_to', 'tin_a_samples', 'ai_mode', 'translate_provider'];
-const ALLOWED = { ai_mode: ['api', 'claude_plan', 'free'], translate_provider: ['deepl', 'google'] };
-// Kèm cho giao diện biết khóa nào đã đặt trong biến môi trường (không trả giá trị khóa).
-const withEnv = s => ({ ...s, env: { anthropic: !!config.anthropic.key, deepl: !!config.deeplKey, google: !!config.googleTranslateKey, agent: !!config.agentToken } });
-r.get('/settings', wrap(async (req, res) => res.json(withEnv(await getSettings()))));
+const EDITABLE = ['articles_per_day', 'daily_hour', 'min_relevance', 'weekly_enabled', 'weekly_to', 'tin_a_samples', 'ai_mode'];
+const ALLOWED = { ai_mode: ['api', 'claude_plan', 'free'] };
+// Kèm cho giao diện biết khóa nào đã đặt trong biến môi trường (không trả giá trị khóa) và hạn mức Google đã dùng.
+const withEnv = async s => ({
+  ...s,
+  env: { anthropic: !!config.anthropic.key, google: !!config.googleTranslateKey, agent: !!config.agentToken },
+  translate_usage: await translator.usage().catch(() => null),
+});
+r.get('/settings', wrap(async (req, res) => res.json(await withEnv(await getSettings()))));
 r.put('/settings', wrap(async (req, res) => {
   for (const k of EDITABLE) {
     if (req.body[k] === undefined) continue;
     if (ALLOWED[k] && !ALLOWED[k].includes(req.body[k])) return res.status(400).json({ error: `Giá trị không hợp lệ cho ${k}` });
     await setSetting(k, req.body[k]);
   }
-  res.json(withEnv(await getSettings()));
+  res.json(await withEnv(await getSettings()));
 }));
 r.get('/sources', wrap(async (req, res) => res.json(await q('SELECT * FROM sources ORDER BY region, name'))));
 r.post('/sources', wrap(async (req, res) => {

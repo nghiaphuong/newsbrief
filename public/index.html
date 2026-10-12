@@ -122,12 +122,12 @@
           <fieldset class="full mode-pick" id="stMode">
             <legend>Chế độ xử lý tin</legend>
             <label class="mode"><input type="radio" name="ai_mode" value="api">
-              <span><strong>1. Claude API (dùng API credits)</strong><small>Chất lượng cao nhất, xử lý ngay trên server. Tốn phí theo lượng dùng tại console.anthropic.com.</small><em data-env="anthropic"></em></span></label>
+              <span><strong>1. Claude API (dùng API credits)</strong><small>Xử lý ngay trên server. Ước tính khoảng 15–25 USD/tháng với 20 tin/ngày (Sonnet 5.5), tính theo lượng dùng tại console.anthropic.com.</small><em data-env="anthropic"></em></span></label>
             <label class="mode"><input type="radio" name="ai_mode" value="claude_plan">
-              <span><strong>2. Gói Claude Team/Pro</strong><small>Server chỉ thu thập và lọc tin; tác vụ Claude Code chạy theo lịch bằng tài khoản Claude của bạn sẽ chấm điểm, viết tin A, tổng hợp và dịch theo yêu cầu. Không tốn API credits, tính vào hạn mức của gói. Cách cài: xem docs/CLAUDE_PLAN.md.</small><em data-env="agent"></em></span></label>
+              <span><strong>2. Gói Claude Team/Pro (mặc định – không phát sinh thêm chi phí nếu đã có gói)</strong><small>Server chỉ thu thập và lọc tin; tác vụ Claude Code chạy theo lịch bằng tài khoản Claude của bạn sẽ chấm điểm, viết tin A, tổng hợp và dịch theo yêu cầu. Không tốn API credits, tính vào hạn mức của gói. Cách cài: xem docs/CLAUDE_PLAN.md.</small><em data-env="agent"></em></span></label>
             <label class="mode"><input type="radio" name="ai_mode" value="free">
-              <span><strong>3. Miễn phí, không dùng AI (dịch máy)</strong><small>Lọc tin bằng từ khóa; tiêu đề và đoạn mở đầu được dịch máy làm tin A; không trích số liệu; bản tổng hợp là danh sách ghép. Hạn mức miễn phí khoảng 500.000 ký tự/tháng.</small>
-                <span class="row"><select id="stProvider"><option value="deepl">DeepL</option><option value="google">Google Translate</option></select><em data-env="translate"></em></span></span></label>
+              <span><strong>3. Miễn phí, không dùng AI (Google Translate)</strong><small>Lọc tin bằng từ khóa; tiêu đề và đoạn mở đầu được dịch máy làm tin A; không trích số liệu; bản tổng hợp là danh sách ghép. App tự dừng dịch khi chạm 500.000 ký tự trong tháng tính phí của Google (giờ Thái Bình Dương) để không phát sinh phí.</small>
+                <em data-env="translate"></em><small id="stUsage"></small></span></label>
           </fieldset>
           <label>Số tin tối đa mỗi ngày<input type="number" min="1" max="60" id="stN"></label>
           <label>Giờ cập nhật tự động (giờ Oslo)<input type="number" min="0" max="23" id="stHour"></label>
@@ -152,7 +152,7 @@
           <input id="srcName" placeholder="Tên nguồn" required>
           <input id="srcUrl" placeholder="URL RSS" required type="url">
           <select id="srcLang"><option value="en">Tiếng Anh</option><option value="no">Tiếng Na Uy</option></select>
-          <label class="check"><input type="checkbox" id="srcPay"> Có thu phí</label>
+          <label class="check"><input type="checkbox" id="srcPay"> Có thu phí (sẽ bỏ qua vì không đọc được toàn văn)</label>
           <button class="btn" type="submit">Thêm nguồn</button>
         </form>
 

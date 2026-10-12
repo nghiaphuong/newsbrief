@@ -1,6 +1,6 @@
 // Danh sách nguồn mặc định (RSS). Có thể bật/tắt/thêm nguồn trong mục "Cài đặt" của trang web.
 // filter:false = nguồn chuyên về Na Uy/Việt Nam/ASEAN, không cần lọc từ khóa trước khi AI chấm điểm.
-// paywall:true = báo thu phí: chỉ dùng phần công khai, luôn kèm link gốc.
+// paywall:true = báo thu phí: bị bỏ qua khi thu thập vì không đọc được toàn văn.
 const DEFAULT_SOURCES = [
   // --- Na Uy: nhà nước & báo chí ---
   { name: 'Regjeringen.no – Nyheter', url: 'https://www.regjeringen.no/no/rss/Rss/2581966/?documentType=aktuelt/nyheter', lang: 'no', region: 'norway', filter: false },

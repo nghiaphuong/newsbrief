@@ -3,7 +3,9 @@
 //  - api:         Claude API làm mọi bước (tốn API credits).
 //  - claude_plan: server chỉ thu thập & lọc từ khóa, đưa bài vào hàng đợi; tác vụ Claude Code chạy bằng
 //                 gói Claude Team/Pro lấy việc qua /api/agent/* và gửi kết quả về (src/agent.js).
-//  - free:        không dùng AI: lọc từ khóa, dịch máy (DeepL/Google), tổng hợp dạng danh sách.
+//  - free:        không dùng AI: lọc từ khóa, dịch máy Google (tự chặn ở 500.000 ký tự/tháng), tổng hợp dạng danh sách.
+// Chỉ nhận bài đọc được toàn văn: bỏ nguồn thu phí và bài chỉ lấy được trích đoạn.
+const config = require('./config');
 const { q, getSettings } = require('./db');
 const ai = require('./ai');
 const heuristic = require('./heuristic');
@@ -12,7 +14,8 @@ const { collectCandidates, extractArticle, hash, domainOf } = require('./fetcher
 const { ymd, viDate, toMysql, pool } = require('./util');
 
 const MODES = ['api', 'claude_plan', 'free'];
-const modeOf = s => (MODES.includes(s.ai_mode) ? s.ai_mode : 'api');
+const modeOf = s => (MODES.includes(s.ai_mode) ? s.ai_mode : 'claude_plan');
+const FULL_TEXT_MIN = 1500; // dưới ngưỡng này coi như chỉ lấy được trích đoạn
 
 let current = null; // tránh chạy chồng
 
@@ -35,9 +38,10 @@ async function finishRun(ctx, ok, stats) {
     [ok ? 'done' : 'error', JSON.stringify(stats || {}), ctx.logs.join('\n').slice(-60000), ctx.id]);
 }
 
-// Tiêu đề + tin A bằng dịch máy (chế độ free): dịch tiêu đề và đoạn mở đầu bài.
-async function processFree(article, settings) {
-  const [titleVi, leadVi] = await translator.translateTexts([article.title_original, heuristic.lead(article)], article.lang, settings.translate_provider);
+// Tiêu đề + tin A bằng dịch máy (chế độ free): dịch tiêu đề và đoạn mở đầu bài (~350 ký tự để tiết kiệm hạn mức:
+// 20 bài/ngày ≈ 270.000 ký tự/tháng, còn ~230.000 cho dịch toàn văn theo yêu cầu).
+async function processFree(article) {
+  const [titleVi, leadVi] = await translator.translateTexts([article.title_original, heuristic.lead(article, 350)], article.lang);
   return { title_vi: titleVi, tin_a_vi: heuristic.tinA(titleVi, leadVi, article), key_figures: [] };
 }
 
@@ -50,7 +54,7 @@ async function processOne(article, settings) {
   }
   await q("UPDATE articles SET status = 'processing' WHERE id = ?", [article.id]);
   try {
-    const res = mode === 'free' ? await processFree(article, settings) : await ai.processArticle(article, settings.tin_a_samples || '');
+    const res = mode === 'free' ? await processFree(article) : await ai.processArticle(article, settings.tin_a_samples || '');
     // Không đụng tới translation_vi: bản dịch toàn văn (nếu đã có) được giữ nguyên.
     await q(`UPDATE articles SET title_vi = ?, tin_a_vi = ?, key_figures = ?, status = 'done', error_msg = NULL WHERE id = ?`,
       [String(res.title_vi || '').slice(0, 590), res.tin_a_vi, JSON.stringify(res.key_figures), article.id]);
@@ -73,7 +77,7 @@ async function startTranslate(article, settings) {
   if (translating.get(article.id)?.state === 'running') return translateStatus(article.id);
   translating.set(article.id, { state: 'running' });
   const job = mode === 'free'
-    ? translator.translateLong(article.content_original, article.lang, settings.translate_provider)
+    ? translator.translateLong(article.content_original, article.lang)
     : ai.translateArticle(article);
   job
     .then(translation => q('UPDATE articles SET translation_vi = ?, translate_requested = 0 WHERE id = ?', [translation, article.id]))
@@ -83,19 +87,18 @@ async function startTranslate(article, settings) {
 }
 function translateStatus(id) { return translating.get(id) || { state: 'idle' }; }
 
+// Chỉ lưu bài đọc được toàn văn; trả null nếu bài thu phí, không tải được hoặc chỉ có trích đoạn.
 async function insertCandidate(c, briefDate, scoreInfo, log) {
-  let content = c.summary || '';
-  let full = false;
+  if (c.paywall) { log(`Bỏ qua (báo thu phí): ${c.title}`); return null; }
+  let content = '';
   try {
-    const ex = await extractArticle(c.url);
-    if (ex.text && ex.text.length > content.length) content = ex.text;
-    full = !c.paywall && ex.text.length > 1500;
-  } catch (e) { log(`Không lấy được nội dung ${c.url}: ${e.message}`); }
-  if (content.length < 120) { log(`Bỏ qua (nội dung quá ngắn): ${c.title}`); return null; }
+    content = (await extractArticle(c.url)).text || '';
+  } catch (e) { log(`Bỏ qua (không tải được bài): ${c.title} – ${e.message}`); return null; }
+  if (content.length < FULL_TEXT_MIN) { log(`Bỏ qua (không đọc được toàn văn): ${c.title}`); return null; }
   const r = await q(`INSERT IGNORE INTO articles (url, url_hash, source_name, source_domain, lang, title_original, published_at, brief_date,
       content_original, full_text, category, relations, relevance, relevance_reason) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [c.url.slice(0, 690), hash(c.url), c.source.slice(0, 150), domainOf(c.url), c.lang, c.title.slice(0, 590), toMysql(c.published), briefDate,
-      content, full ? 1 : 0, scoreInfo.category || null, (scoreInfo.relations || '').slice(0, 250), Math.round(scoreInfo.score || 0), (scoreInfo.reason || '').slice(0, 490)]);
+      content, 1, scoreInfo.category || null, (scoreInfo.relations || '').slice(0, 250), Math.round(scoreInfo.score || 0), (scoreInfo.reason || '').slice(0, 490)]);
   if (!r.insertId) return null;
   const rows = await q('SELECT * FROM articles WHERE id = ?', [r.insertId]);
   return rows[0];
@@ -161,6 +164,7 @@ async function runDaily(trigger = 'manual', opts = {}) {
 
       if (mode === 'claude_plan') {
         stats.queued = inserted.length;
+        if (!config.agentToken) ctx.log('CẢNH BÁO: chưa đặt AGENT_API_TOKEN trên server nên tác vụ Claude Code chưa lấy được việc (xem docs/CLAUDE_PLAN.md).');
         ctx.log(`Đã đưa ${inserted.length} tin vào hàng đợi; Claude (gói Team/Pro) sẽ chấm điểm, viết tin A và tổng hợp ở lượt chạy tiếp theo.`);
       } else {
         ctx.public.step = mode === 'free' ? 'Dịch máy tiêu đề và đoạn mở đầu' : 'Viết tin A, trích số liệu';
@@ -213,4 +217,4 @@ async function buildDailyDigest(briefDate, log = console.log, length = 'short', 
   return content;
 }
 
-module.exports = { runDaily, buildDailyDigest, processOne, startTranslate, translateStatus, status, modeOf };
+module.exports = { runDaily, buildDailyDigest, processOne, startTranslate, translateStatus, status, modeOf, FULL_TEXT_MIN };
