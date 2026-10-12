@@ -14,7 +14,7 @@ const { collectCandidates, extractArticle, hash, domainOf } = require('./fetcher
 const { ymd, viDate, toMysql, pool } = require('./util');
 
 const MODES = ['api', 'claude_plan', 'free'];
-const modeOf = s => (MODES.includes(s.ai_mode) ? s.ai_mode : 'claude_plan');
+const modeOf = s => (MODES.includes(s.ai_mode) ? s.ai_mode : 'api');
 const FULL_TEXT_MIN = 1500; // dưới ngưỡng này coi như chỉ lấy được trích đoạn
 
 let current = null; // tránh chạy chồng

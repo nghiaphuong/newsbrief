@@ -24,8 +24,8 @@ const DEFAULT_SETTINGS = {
   min_relevance: '45',
   weekly_enabled: '1',
   weekly_to: config.weeklyTo,
-  // api | claude_plan | free. Mặc định claude_plan: rẻ nhất khi đã có gói Claude Team/Pro (không phát sinh phí thêm).
-  ai_mode: 'claude_plan',
+  // api | claude_plan | free. Mặc định api: Claude API xử lý ngay trên server (dùng API credits).
+  ai_mode: 'api',
   // '1' = ai cũng xem được không cần đăng nhập (chỉ xem); '0' = phải đăng nhập mới xem
   public_access: '1',
 };
@@ -48,6 +48,13 @@ async function migrate() {
     await pool.query(stmt);
   }
   await upgradeSchema();
+  // Một lần duy nhất: CSDL tạo khi mặc định còn là claude_plan được chuyển sang mặc định mới (api).
+  // Sau đó lựa chọn trong Cài đặt được giữ nguyên.
+  const [migrated] = await q("SELECT v FROM settings WHERE k = 'ai_mode_default_v2'");
+  if (!migrated) {
+    await q("UPDATE settings SET v = 'api' WHERE k = 'ai_mode' AND v = 'claude_plan'");
+    await q("INSERT IGNORE INTO settings (k, v) VALUES ('ai_mode_default_v2', '1')");
+  }
   for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) {
     await q('INSERT IGNORE INTO settings (k, v) VALUES (?, ?)', [k, v]);
   }

@@ -343,7 +343,7 @@ async function doSearch() {
 // ---------- Cài đặt ----------
 async function loadSettings() {
   const s = await api('/settings');
-  state.mode = s.ai_mode || 'claude_plan';
+  state.mode = s.ai_mode || 'api';
   $$('#stMode input[name="ai_mode"]').forEach(r => r.checked = r.value === state.mode);
   state.env = s.env || {};
   showEnvHints();
@@ -369,7 +369,7 @@ function showEnvHints() {
 
 $('#settingsForm').addEventListener('submit', async e => {
   e.preventDefault();
-  const mode = $('#stMode input[name="ai_mode"]:checked')?.value || 'claude_plan';
+  const mode = $('#stMode input[name="ai_mode"]:checked')?.value || 'api';
   await api('/settings', { method: 'PUT', body: { ai_mode: mode, public_access: $('#stPublic').checked ? '1' : '0', articles_per_day: $('#stN').value, daily_hour: $('#stHour').value, min_relevance: $('#stMin').value, weekly_to: $('#stMail').value, weekly_enabled: $('#stWeekly').checked ? '1' : '0', tin_a_samples: $('#stSamples').value } });
   state.mode = mode; state.publicAccess = $('#stPublic').checked;
   showAutoNote($('#stHour').value);
