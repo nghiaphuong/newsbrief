@@ -119,12 +119,22 @@
       <div class="pane wide">
         <h2 class="view-title">Cài đặt</h2>
         <form class="settings" id="settingsForm">
+          <fieldset class="full mode-pick" id="stMode">
+            <legend>Chế độ xử lý tin</legend>
+            <label class="mode"><input type="radio" name="ai_mode" value="api">
+              <span><strong>1. Claude API (dùng API credits)</strong><small>Chất lượng cao nhất, xử lý ngay trên server. Tốn phí theo lượng dùng tại console.anthropic.com.</small><em data-env="anthropic"></em></span></label>
+            <label class="mode"><input type="radio" name="ai_mode" value="claude_plan">
+              <span><strong>2. Gói Claude Team/Pro</strong><small>Server chỉ thu thập và lọc tin; tác vụ Claude Code chạy theo lịch bằng tài khoản Claude của bạn sẽ chấm điểm, viết tin A, tổng hợp và dịch theo yêu cầu. Không tốn API credits, tính vào hạn mức của gói. Cách cài: xem docs/CLAUDE_PLAN.md.</small><em data-env="agent"></em></span></label>
+            <label class="mode"><input type="radio" name="ai_mode" value="free">
+              <span><strong>3. Miễn phí, không dùng AI (dịch máy)</strong><small>Lọc tin bằng từ khóa; tiêu đề và đoạn mở đầu được dịch máy làm tin A; không trích số liệu; bản tổng hợp là danh sách ghép. Hạn mức miễn phí khoảng 500.000 ký tự/tháng.</small>
+                <span class="row"><select id="stProvider"><option value="deepl">DeepL</option><option value="google">Google Translate</option></select><em data-env="translate"></em></span></span></label>
+          </fieldset>
           <label>Số tin tối đa mỗi ngày<input type="number" min="1" max="60" id="stN"></label>
           <label>Giờ cập nhật tự động (giờ Oslo)<input type="number" min="0" max="23" id="stHour"></label>
-          <label>Ngưỡng liên quan tối thiểu (0–100)<input type="number" min="0" max="100" id="stMin"></label>
+          <label>Ngưỡng liên quan tối thiểu (0–100) <small>Dùng khi Claude chấm điểm (chế độ 1 và 2).</small><input type="number" min="0" max="100" id="stMin"></label>
           <label>Email nhận bản tin tuần<input type="email" id="stMail"></label>
           <label class="check"><input type="checkbox" id="stWeekly"> Gửi email bản tin tuần (sáng thứ Hai)</label>
-          <label class="full">Mẫu tin A tham khảo <small>Dán vài mẫu tin A; AI sẽ bắt chước cấu trúc và văn phong.</small><textarea id="stSamples" rows="8"></textarea></label>
+          <label class="full">Mẫu tin A tham khảo <small>Dán vài mẫu tin A; Claude sẽ bắt chước cấu trúc và văn phong (không áp dụng cho chế độ miễn phí).</small><textarea id="stSamples" rows="8"></textarea></label>
           <div class="full row"><button class="btn primary" type="submit">Lưu cài đặt</button><span class="saved" id="stSaved"></span></div>
         </form>
 

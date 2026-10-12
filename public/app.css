@@ -175,6 +175,17 @@ label.check { flex-direction: row; align-items: center; gap: 8px; color: var(--i
 .settings { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
 .settings .full { grid-column: 1 / -1; }
 .saved { font-size: 13px; color: var(--muted); align-self: center; }
+.mode-pick { border: 1px solid var(--line); border-radius: var(--r-md); padding: 12px 14px; display: grid; gap: 10px; margin: 0; min-width: 0; }
+.mode-pick legend { font-weight: 600; color: var(--ink); padding: 0 6px; }
+.mode-pick label.mode { flex-direction: row; align-items: flex-start; gap: 10px; padding: 10px; border-radius: var(--r-sm); cursor: pointer; color: var(--ink); }
+.mode-pick label.mode:has(input:checked) { background: var(--paper); outline: 1px solid var(--fjord); }
+.mode-pick label.mode input { margin-top: 3px; flex: none; }
+.mode-pick label.mode > span { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.mode-pick label.mode small { color: var(--muted); }
+.mode-pick label.mode .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.mode-pick em { font-style: normal; font-size: 12px; }
+.mode-pick em.ok { color: var(--muted); }
+.mode-pick em.missing { color: var(--lacquer); }
 .table-wrap { overflow-x: auto; }
 .sources { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .sources th, .sources td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }

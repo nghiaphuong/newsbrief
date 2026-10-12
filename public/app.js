@@ -148,6 +148,7 @@ async function openArticle(id, readerSel) {
       <a href="${esc(a.url)}" target="_blank" rel="noopener">Mở bài gốc ↗</a>
       ${a.full_text ? '' : '<span class="badge">Chỉ có phần công khai của bài</span>'}</div>
     ${a.status === 'error' ? `<p class="err">Lỗi xử lý: ${esc(a.error_msg)}</p>` : ''}
+    ${a.status === 'pending' ? '<p class="empty">Bài đang chờ xử lý. Ở chế độ gói Claude Team/Pro, tin A và số liệu sẽ có sau lượt chạy Claude tiếp theo.</p>' : ''}
     <div class="tabs" role="tablist">
       <button class="active" data-tab="tina">Tin A</button>
       <button data-tab="trans">Bản dịch</button>
@@ -157,7 +158,9 @@ async function openArticle(id, readerSel) {
     <div data-panel="tina"><div class="tab-tools"><button class="btn small" data-copy="tina">Sao chép tin A</button></div><div class="prose tin-a">${md(a.tin_a_vi) || '<p>Chưa có.</p>'}</div></div>
     <div data-panel="trans" hidden>${a.translation_vi
       ? `<div class="tab-tools"><button class="btn small" data-copy="trans">Sao chép bản dịch</button><button class="btn ghost small" data-translate>Dịch lại</button></div><div class="prose">${md(a.translation_vi)}</div>`
-      : `<p class="empty">Bài này chưa được dịch toàn văn (chỉ dịch khi cần để tiết kiệm chi phí).</p><div class="tab-tools"><button class="btn small" data-translate>Dịch toàn văn</button></div>`}</div>
+      : a.translate_requested
+        ? '<p class="empty">Đã yêu cầu dịch toàn văn. Bản dịch sẽ có sau lượt chạy Claude (gói Team/Pro) tiếp theo.</p>'
+        : `<p class="empty">Bài này chưa được dịch toàn văn (chỉ dịch khi cần để tiết kiệm chi phí).</p><div class="tab-tools"><button class="btn small" data-translate>Dịch toàn văn</button></div>`}</div>
     <div data-panel="orig" hidden><div class="tab-tools"><button class="btn small" data-copy="orig">Sao chép nguyên văn</button></div><div class="prose" lang="${a.lang === 'no' ? 'nb' : 'en'}">${md(a.content_original)}</div></div>
     <div data-panel="figs" hidden><div class="tab-tools"><button class="btn small" data-copy="figs">Sao chép số liệu</button></div>
       ${figs.length ? `<ul class="figs">${figs.map(f => `<li><span class="v">${esc(f.figure)}</span><span class="c">${esc(f.context)}</span><span class="s">Nguồn: ${esc(f.source)}${f.type ? ' · ' + esc(f.type) : ''}</span></li>`).join('')}</ul>` : '<p class="empty">Bài không có số liệu định lượng.</p>'}</div>
@@ -177,10 +180,14 @@ async function openArticle(id, readerSel) {
   pane.querySelector('[data-back]').onclick = () => pane.classList.remove('open');
   pane.querySelector('[data-reprocess]').onclick = async e => {
     e.target.disabled = true; e.target.textContent = 'Đang xử lý… (1–2 phút)';
-    try { await api(`/articles/${id}/reprocess`, { method: 'POST' }); toast('Đã xử lý lại'); openArticle(id, readerSel); }
-    catch (err) { toast(err.message); e.target.disabled = false; }
+    try {
+      const r = await api(`/articles/${id}/reprocess`, { method: 'POST' });
+      toast(r.status === 'pending' ? 'Đã đưa vào hàng đợi cho Claude (gói Team/Pro)' : 'Đã xử lý lại');
+      openArticle(id, readerSel);
+    } catch (err) { toast(err.message); e.target.disabled = false; }
   };
-  pane.querySelector('[data-translate]').onclick = async e => {
+  const trBtn = pane.querySelector('[data-translate]');
+  if (trBtn) trBtn.onclick = async e => {
     const label = e.target.textContent;
     e.target.disabled = true; e.target.textContent = 'Đang dịch… (1–3 phút)';
     try {
@@ -190,7 +197,7 @@ async function openArticle(id, readerSel) {
         st = await api(`/articles/${id}/translate`);
       }
       if (st.state === 'error') throw new Error('Lỗi dịch: ' + st.error);
-      toast('Đã dịch toàn văn');
+      toast(st.state === 'queued' ? 'Đã đưa vào hàng đợi; Claude sẽ dịch ở lượt chạy tiếp theo' : 'Đã dịch toàn văn');
       if (state.selected === id) { await openArticle(id, readerSel); pane.querySelector('[data-tab="trans"]').click(); }
     } catch (err) { toast(err.message); e.target.disabled = false; e.target.textContent = label; }
   };
@@ -301,15 +308,35 @@ async function doSearch() {
 // ---------- Cài đặt ----------
 async function loadSettings() {
   const s = await api('/settings');
+  state.mode = s.ai_mode || 'api';
+  $$('#stMode input[name="ai_mode"]').forEach(r => r.checked = r.value === state.mode);
+  $('#stProvider').value = s.translate_provider || 'deepl';
+  state.env = s.env || {};
+  showEnvHints();
   $('#stN').value = s.articles_per_day; $('#stHour').value = s.daily_hour; $('#stMin').value = s.min_relevance;
   $('#stMail').value = s.weekly_to; $('#stWeekly').checked = s.weekly_enabled === '1'; $('#stSamples').value = s.tin_a_samples || '';
   const d = new Date(state.today + 'T12:00:00Z'); const dow = (d.getUTCDay() + 6) % 7;
   if (!$('#wFrom').value) { $('#wFrom').value = addDays(state.today, -dow - 7); $('#wTo').value = addDays(state.today, -dow - 1); }
   loadSources(); loadRuns();
 }
+// Cho biết biến môi trường cần cho từng chế độ đã được đặt trên server chưa.
+function showEnvHints() {
+  const env = state.env || {};
+  const hint = (el, ok, okText, missText) => { el.className = ok ? 'ok' : 'missing'; el.textContent = ok ? okText : missText; };
+  hint($('#stMode [data-env="anthropic"]'), env.anthropic, '✓ Đã có ANTHROPIC_API_KEY', '⚠ Chưa đặt ANTHROPIC_API_KEY trên server');
+  hint($('#stMode [data-env="agent"]'), env.agent, '✓ Đã có AGENT_API_TOKEN', '⚠ Chưa đặt AGENT_API_TOKEN trên server');
+  const p = $('#stProvider').value;
+  hint($('#stMode [data-env="translate"]'), p === 'google' ? env.google : env.deepl,
+    p === 'google' ? '✓ Đã có GOOGLE_TRANSLATE_API_KEY' : '✓ Đã có DEEPL_API_KEY',
+    p === 'google' ? '⚠ Chưa đặt GOOGLE_TRANSLATE_API_KEY trên server' : '⚠ Chưa đặt DEEPL_API_KEY trên server');
+}
+$('#stProvider').onchange = showEnvHints;
+
 $('#settingsForm').addEventListener('submit', async e => {
   e.preventDefault();
-  await api('/settings', { method: 'PUT', body: { articles_per_day: $('#stN').value, daily_hour: $('#stHour').value, min_relevance: $('#stMin').value, weekly_to: $('#stMail').value, weekly_enabled: $('#stWeekly').checked ? '1' : '0', tin_a_samples: $('#stSamples').value } });
+  const mode = $('#stMode input[name="ai_mode"]:checked')?.value || 'api';
+  await api('/settings', { method: 'PUT', body: { ai_mode: mode, translate_provider: $('#stProvider').value, articles_per_day: $('#stN').value, daily_hour: $('#stHour').value, min_relevance: $('#stMin').value, weekly_to: $('#stMail').value, weekly_enabled: $('#stWeekly').checked ? '1' : '0', tin_a_samples: $('#stSamples').value } });
+  state.mode = mode;
   $('#stSaved').textContent = 'Đã lưu.'; setTimeout(() => $('#stSaved').textContent = '', 2500);
 });
 $('#wDownload').onclick = () => { location.href = `/api/weekly/docx?from=${$('#wFrom').value}&to=${$('#wTo').value}`; };
@@ -338,7 +365,7 @@ $('#srcForm').addEventListener('submit', async e => {
 async function loadRuns() {
   const rows = await api('/runs');
   $('#runList').innerHTML = rows.map(r => { const s = typeof r.stats === 'string' ? JSON.parse(r.stats || '{}') : (r.stats || {});
-    return `<li data-id="${r.id}"><span>${r.status === 'done' ? '✓' : r.status === 'error' ? '✗' : '…'} ${vi(r.started_at)} ${String(r.started_at).slice(11, 16)} · ${r.trigger_by === 'manual' ? 'thủ công' : 'tự động'}</span><small>${s.processed ?? 0} tin xử lý · ${s.candidates ?? 0} ứng viên${s.errors ? ` · ${s.errors} lỗi` : ''}</small></li>`; }).join('') || '<li class="empty">Chưa có lượt cập nhật.</li>';
+    return `<li data-id="${r.id}"><span>${r.status === 'done' ? '✓' : r.status === 'error' ? '✗' : '…'} ${vi(r.started_at)} ${String(r.started_at).slice(11, 16)} · ${r.trigger_by === 'manual' ? 'thủ công' : 'tự động'}</span><small>${s.processed ?? 0} tin xử lý · ${s.candidates ?? 0} ứng viên${s.errors ? ` · ${s.errors} lỗi` : ''}${s.queued ? ` · ${s.queued} chờ Claude` : ''}</small></li>`; }).join('') || '<li class="empty">Chưa có lượt cập nhật.</li>';
   $$('#runList [data-id]').forEach(li => li.onclick = async () => { const r = await api('/runs/' + li.dataset.id); alert(r.log || 'Không có nhật ký'); });
 }
 

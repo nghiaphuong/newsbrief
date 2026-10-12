@@ -28,6 +28,11 @@ module.exports = {
     pass: env('SMTP_PASSWORD'),
     from: env('MAIL_FROM', env('SMTP_USER')),
   },
+  // Chế độ miễn phí: dịch bằng DeepL API Free hoặc Google Cloud Translation (mỗi bên miễn phí 500.000 ký tự/tháng)
+  deeplKey: env('DEEPL_API_KEY'),
+  googleTranslateKey: env('GOOGLE_TRANSLATE_API_KEY'),
+  // Chế độ gói Claude Team/Pro: token cho tác vụ Claude Code lấy việc và gửi kết quả (/api/agent/*)
+  agentToken: env('AGENT_API_TOKEN'),
   weeklyTo: env('WEEKLY_TO', 'tratran.norway@gmail.com'),
   cronKey: env('CRON_KEY'),
   readonlyToken: env('READONLY_API_TOKEN'),

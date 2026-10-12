@@ -7,7 +7,7 @@ const scheduler = require('./src/scheduler');
 
 const app = express();
 app.set('trust proxy', 1);
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '10mb' })); // kết quả từ tác vụ Claude (gói Team/Pro) có thể gồm nhiều bản dịch
 app.use(cookieParser());
 app.use((req, res, next) => { res.setHeader('X-Robots-Tag', 'noindex, nofollow'); next(); });
 app.get('/healthz', (req, res) => res.json({ ok: true }));

@@ -53,18 +53,34 @@ NGUYÊN TẮC BẮT BUỘC:
 4. Văn phong: trang trọng, khách quan, súc tích, chuẩn mực của văn bản đối ngoại và báo chí chính thống. Dùng "Na Uy", "Việt Nam", "ASEAN", "EU", "Liên bang Nga", "Trung Quốc", "Hoa Kỳ".
 5. Nếu văn bản nguồn chỉ là phần công khai/trích đoạn (bài có thu phí), chỉ xử lý phần đó và không phỏng đoán phần còn lại.`;
 
-// ---------- 1. Chấm điểm mức độ liên quan (theo lô) ----------
-async function scoreCandidates(items) {
-  const list = items.map((it, i) => `[${i}] (${it.source}; ${it.lang}) ${it.title}\n    ${(it.summary || '').slice(0, 300)}`).join('\n');
-  const system = `${CORE_RULES}
-Nhiệm vụ: sàng lọc tin cho bản tin đối ngoại hàng ngày của Đại sứ quán Việt Nam tại Na Uy.
+const SCORING_RULES = `Nhiệm vụ: sàng lọc tin cho bản tin đối ngoại hàng ngày của Đại sứ quán Việt Nam tại Na Uy.
 Thứ tự ưu tiên (điểm cao → thấp):
 - Quan hệ Na Uy – Việt Nam (cao nhất); Na Uy – ASEAN / các nước Đông Nam Á.
 - Chính trị: chính sách đối ngoại, an ninh của Na Uy; quan hệ Na Uy với Bắc Âu, EU, Hoa Kỳ, Trung Quốc, Nga và các nước lớn; NATO; chính sách mới và dự luật gây tranh cãi của Chính phủ/Quốc hội Na Uy.
 - Kinh tế: chính sách kinh tế, đầu tư (gồm Quỹ Dầu mỏ, Norfund), thương mại, doanh nghiệp, năng lượng, thủy sản, hàng hải của Na Uy; an sinh xã hội Na Uy.
 - Diễn biến về các nước lớn, EU, ASEAN, tổ chức đa phương, điểm nóng CÓ tác động trực tiếp đến Na Uy – Bắc Âu – Việt Nam – Đông Nam Á.
 - Văn hóa – xã hội: điểm thấp hơn, trừ khi liên quan Việt Nam/cộng đồng người Việt.
-Loại bỏ: thể thao, giải trí, tai nạn/hình sự địa phương, thời tiết, quảng cáo, tin không liên quan.
+Loại bỏ: thể thao, giải trí, tai nạn/hình sự địa phương, thời tiết, quảng cáo, tin không liên quan.`;
+
+const KEY_FIGURES_SPEC = 'Mảng JSON các số liệu/phân tích định lượng có trong bài: [{"figure":"giá trị kèm đơn vị","context":"nội dung bằng tiếng Việt","source":"nguồn của số liệu theo bài, hoặc tên báo nếu bài không nêu","type":"thực tế|dự báo|ước tính"}]. Trả [] nếu không có.';
+const TRANSLATION_SPEC = 'Bản dịch ĐẦY ĐỦ, trung thành toàn bộ văn bản nguồn sang tiếng Việt, giữ cấu trúc đoạn. Không lược bỏ câu nào chứa số liệu.';
+
+function tinAGuide(tinASamples) {
+  return tinASamples && tinASamples.trim()
+    ? `MẪU TIN A THAM KHẢO (bắt chước cấu trúc, độ dài và văn phong, KHÔNG lấy nội dung):\n${tinASamples.trim()}`
+    : `KHUÔN TIN A MẶC ĐỊNH: 1 dòng tiêu đề ngắn gọn, in đậm bằng **…**; tiếp theo 1 đoạn 80–150 chữ mở đầu bằng thời gian (vd: "Ngày 10/10/2026,"), nêu chủ thể – sự kiện – nội dung chính – số liệu then chốt kèm nguồn; kết thúc bằng nguồn trong ngoặc, vd: "(Theo NRK, 10/10/2026)".`;
+}
+
+function dailyDigestRules(dateLabel, length = 'short') {
+  return `Nhiệm vụ: viết BẢN TỔNG HỢP TIN TRONG NGÀY bằng tiếng Việt từ các tin A đã có.
+Yêu cầu: tiêu đề "Tổng hợp tin ngày ${dateLabel}"; sắp xếp theo thứ tự: Quan hệ Na Uy – Việt Nam/ASEAN → Chính trị – đối ngoại → Kinh tế → Văn hóa – xã hội. Mỗi tin là 1 đoạn ngắn gọn (2–4 câu), giữ số liệu then chốt kèm nguồn, cuối đoạn ghi nguồn báo trong ngoặc kèm số thứ tự tin, vd: "(NRK) [3]". Có thể gộp các tin cùng sự kiện vào một đoạn. Tổng độ dài ${LENGTHS[length] || LENGTHS.short}; nếu quá nhiều tin thì gộp/lược tin ít quan trọng nhưng không bỏ số liệu then chốt. Không dùng thông tin ngoài danh sách.`;
+}
+
+// ---------- 1. Chấm điểm mức độ liên quan (theo lô) ----------
+async function scoreCandidates(items) {
+  const list = items.map((it, i) => `[${i}] (${it.source}; ${it.lang}) ${it.title}\n    ${(it.summary || '').slice(0, 300)}`).join('\n');
+  const system = `${CORE_RULES}
+${SCORING_RULES}
 Trả về DUY NHẤT một mảng JSON, mỗi phần tử: {"i": số thứ tự, "score": 0-100, "category": "chinh-tri"|"kinh-te"|"van-hoa-xa-hoi", "relations": "chuỗi ngắn các cặp/nhóm liên quan, vd: Na Uy-Việt Nam; Na Uy-EU", "reason": "lý do ngắn bằng tiếng Việt"}.`;
   const text = await callClaude({ system, user: `Danh sách tin ứng viên:\n${list}`, model: config.anthropic.modelFast, maxTokens: 12000, effort: 'low' });
   return parseJsonLoose(text);
@@ -85,17 +101,14 @@ ${(a.content_original || '').slice(0, 24000)}
 
 // ---------- 2. Xử lý một bài (tự động): tiêu đề, tin A, số liệu — không dịch toàn văn để tiết kiệm chi phí ----------
 async function processArticle(a, tinASamples) {
-  const samples = tinASamples && tinASamples.trim()
-    ? `MẪU TIN A THAM KHẢO (bắt chước cấu trúc, độ dài và văn phong, KHÔNG lấy nội dung):\n${tinASamples.trim()}`
-    : `KHUÔN TIN A MẶC ĐỊNH: 1 dòng tiêu đề ngắn gọn, in đậm bằng **…**; tiếp theo 1 đoạn 80–150 chữ mở đầu bằng thời gian (vd: "Ngày 10/10/2026,"), nêu chủ thể – sự kiện – nội dung chính – số liệu then chốt kèm nguồn; kết thúc bằng nguồn trong ngoặc, vd: "(Theo NRK, 10/10/2026)".`;
   const system = `${CORE_RULES}
-${samples}`;
+${tinAGuide(tinASamples)}`;
   const user = `${sourceBlock(a)}
 
 Hãy trả lời đúng theo định dạng sau, không thêm gì ngoài các thẻ:
 <title_vi>Tiêu đề dịch sang tiếng Việt</title_vi>
 <tin_a>Tin A tóm tắt bằng tiếng Việt theo mẫu.</tin_a>
-<key_figures>Mảng JSON các số liệu/phân tích định lượng có trong bài: [{"figure":"giá trị kèm đơn vị","context":"nội dung bằng tiếng Việt","source":"nguồn của số liệu theo bài, hoặc tên báo nếu bài không nêu","type":"thực tế|dự báo|ước tính"}]. Trả [] nếu không có.</key_figures>`;
+<key_figures>${KEY_FIGURES_SPEC}</key_figures>`;
   const text = await callClaude({ system, user, maxTokens: 10000, effort: 'medium' });
   let figures = [];
   try { figures = parseJsonLoose(tag(text, 'key_figures') || '[]'); } catch { figures = []; }
@@ -113,7 +126,7 @@ async function translateArticle(a) {
   const user = `${sourceBlock(a)}
 
 Hãy trả lời đúng theo định dạng sau, không thêm gì ngoài thẻ:
-<translation>Bản dịch ĐẦY ĐỦ, trung thành toàn bộ văn bản nguồn sang tiếng Việt, giữ cấu trúc đoạn. Không lược bỏ câu nào chứa số liệu.</translation>`;
+<translation>${TRANSLATION_SPEC}</translation>`;
   const text = await callClaude({ system: CORE_RULES, user, maxTokens: 24000, effort: 'medium' });
   const translation = tag(text, 'translation');
   if (!translation) throw new Error('Phản hồi AI thiếu bản dịch');
@@ -136,8 +149,7 @@ function articlesBlock(articles) {
 // ---------- 3. Tổng hợp tin trong ngày ----------
 async function dailyDigest(dateLabel, articles, length = 'short') {
   const system = `${CORE_RULES}
-Nhiệm vụ: viết BẢN TỔNG HỢP TIN TRONG NGÀY bằng tiếng Việt từ các tin A đã có.
-Yêu cầu: tiêu đề "Tổng hợp tin ngày ${dateLabel}"; sắp xếp theo thứ tự: Quan hệ Na Uy – Việt Nam/ASEAN → Chính trị – đối ngoại → Kinh tế → Văn hóa – xã hội. Mỗi tin là 1 đoạn ngắn gọn (2–4 câu), giữ số liệu then chốt kèm nguồn, cuối đoạn ghi nguồn báo trong ngoặc kèm số thứ tự tin, vd: "(NRK) [3]". Có thể gộp các tin cùng sự kiện vào một đoạn. Tổng độ dài ${LENGTHS[length] || LENGTHS.short}; nếu quá nhiều tin thì gộp/lược tin ít quan trọng nhưng không bỏ số liệu then chốt. Không dùng thông tin ngoài danh sách.`;
+${dailyDigestRules(dateLabel, length)}`;
   return callClaude({ system, user: `Các tin trong ngày:\n\n${articlesBlock(articles)}`, maxTokens: 12000 });
 }
 
@@ -156,4 +168,22 @@ Viết phần "Tổng quan tuần ${label}" (khoảng 1 trang A4) bằng tiếng
   return callClaude({ system, user: articlesBlock(articles), maxTokens: 12000 });
 }
 
-module.exports = { callClaude, scoreCandidates, processArticle, translateArticle, dailyDigest, topicDigest, weeklyOverview, LENGTHS };
+// ---------- 6. Hướng dẫn cho tác vụ Claude Code (chế độ gói Claude Team/Pro) ----------
+// Cùng chuẩn mực với chế độ API; Claude đọc hướng dẫn này trong file việc cần làm (xem docs/CLAUDE_PLAN.md).
+function agentInstructions(settings = {}) {
+  return {
+    core_rules: CORE_RULES,
+    process: `Với mỗi phần tử trong "articles": đọc bài nguồn (title_original, content_original; full_text=0 nghĩa là chỉ có phần công khai/trích đoạn) rồi:
+1) Chấm mức liên quan theo tiêu chí sau:
+${SCORING_RULES}
+2) Nếu điểm dưới ${settings.min_relevance || 45}: chỉ trả {"id", "relevance", "reason", "discard": true}.
+3) Nếu đạt: trả {"id", "relevance": 0-100, "category": "chinh-tri"|"kinh-te"|"van-hoa-xa-hoi", "relations": "vd: Na Uy-Việt Nam; Na Uy-EU", "reason": "lý do ngắn", "title_vi": "tiêu đề tiếng Việt", "tin_a_vi": "tin A", "key_figures": ${KEY_FIGURES_SPEC}}
+${tinAGuide(settings.tin_a_samples)}`,
+    translations: `Với mỗi phần tử trong "translations": trả {"id", "translation_vi": "..."} — ${TRANSLATION_SPEC}`,
+    digests: `Với mỗi phần tử trong "digests" (brief_date, date_label, articles đã đánh số [1], [2]…): trả {"brief_date", "content_vi"} theo yêu cầu sau.
+${dailyDigestRules('<date_label>')}`,
+    output: 'Ghi DUY NHẤT một file JSON dạng {"articles": [...], "translations": [...], "digests": [...]} rồi chạy lệnh push. Nội dung là tiếng Việt, định dạng **đậm** và # tiêu đề như các bản tin khác.',
+  };
+}
+
+module.exports = { callClaude, scoreCandidates, processArticle, translateArticle, dailyDigest, topicDigest, weeklyOverview, agentInstructions, articlesBlock, LENGTHS };

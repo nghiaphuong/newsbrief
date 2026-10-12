@@ -24,13 +24,28 @@ const DEFAULT_SETTINGS = {
   min_relevance: '45',
   weekly_enabled: '1',
   weekly_to: config.weeklyTo,
+  ai_mode: 'api',            // api | claude_plan | free
+  translate_provider: 'deepl', // deepl | google (chế độ free)
 };
+
+// Nâng cấp CSDL đã tạo từ phiên bản cũ (chỉ chạy khi còn thiếu).
+async function upgradeSchema() {
+  const cols = await q("SELECT COLUMN_NAME c, COLUMN_TYPE t FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'articles'");
+  const col = Object.fromEntries(cols.map(r => [r.c, r.t]));
+  if (col.status && !col.status.includes("'skipped'")) {
+    await q("ALTER TABLE articles MODIFY status ENUM('pending','processing','done','error','skipped') NOT NULL DEFAULT 'pending'");
+  }
+  if (!col.translate_requested) {
+    await q('ALTER TABLE articles ADD COLUMN translate_requested TINYINT(1) NOT NULL DEFAULT 0 AFTER translation_vi');
+  }
+}
 
 async function migrate() {
   const sql = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
   for (const stmt of sql.split(/;\s*\n/).map(s => s.trim()).filter(Boolean)) {
     await pool.query(stmt);
   }
+  await upgradeSchema();
   for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) {
     await q('INSERT IGNORE INTO settings (k, v) VALUES (?, ?)', [k, v]);
   }

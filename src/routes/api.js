@@ -3,6 +3,7 @@ const config = require('../config');
 const { q, getSettings, setSetting } = require('../db');
 const auth = require('../auth');
 const pipeline = require('../pipeline');
+const agent = require('../agent');
 const { topicSummary } = require('../topics');
 const weekly = require('../weekly');
 const scheduler = require('../scheduler');
@@ -68,6 +69,13 @@ v1.get('/stats', wrap(async (req, res) => res.json({
 })));
 r.use('/v1', v1);
 
+// ---------- Chế độ gói Claude Team/Pro: tác vụ Claude Code lấy việc & gửi kết quả ----------
+const agentApi = express.Router();
+agentApi.use(auth.requireAgentToken);
+agentApi.get('/jobs', wrap(async (req, res) => res.json(await agent.getJobs({ limit: req.query.limit }))));
+agentApi.post('/results', wrap(async (req, res) => res.json(await agent.applyResults(req.body))));
+r.use('/agent', agentApi);
+
 // ---------- Từ đây trở xuống cần đăng nhập ----------
 r.use(auth.requireLogin);
 
@@ -77,7 +85,7 @@ function buildArticleQuery(qs, cols = LIST_COLS) {
   if (qs.from) { w.push('brief_date >= ?'); p.push(qs.from); }
   if (qs.to) { w.push('brief_date <= ?'); p.push(qs.to); }
   if (qs.category) { w.push('category = ?'); p.push(qs.category); }
-  if (qs.status) { w.push('status = ?'); p.push(qs.status); }
+  if (qs.status) { w.push('status = ?'); p.push(qs.status); } else w.push("status <> 'skipped'"); // bài Claude đã loại
   if (qs.q) {
     w.push('(MATCH(title_original, title_vi, tin_a_vi, translation_vi, content_original) AGAINST (? IN BOOLEAN MODE) OR title_original LIKE ? OR title_vi LIKE ? OR tin_a_vi LIKE ?)');
     const like = `%${qs.q}%`; const ft = qs.q.replace(/[+\-<>()~*"@]/g, ' ').trim() || qs.q; p.push(ft, like, like, like);
@@ -104,8 +112,7 @@ r.post('/articles/:id/reprocess', wrap(async (req, res) => {
 r.post('/articles/:id/translate', wrap(async (req, res) => {
   const a = (await q('SELECT * FROM articles WHERE id = ?', [req.params.id]))[0];
   if (!a) return res.status(404).json({ error: 'Không tìm thấy' });
-  pipeline.startTranslate(a);
-  res.json(pipeline.translateStatus(a.id));
+  res.json(await pipeline.startTranslate(a, await getSettings()));
 }));
 r.get('/articles/:id/translate', (req, res) => res.json(pipeline.translateStatus(Number(req.params.id))));
 r.delete('/articles/:id', wrap(async (req, res) => { await q('DELETE FROM articles WHERE id = ?', [req.params.id]); res.json({ ok: true }); }));
@@ -165,11 +172,18 @@ r.post('/weekly/send', wrap(async (req, res) => {
 }));
 
 // ---------- Cài đặt & nguồn ----------
-const EDITABLE = ['articles_per_day', 'daily_hour', 'min_relevance', 'weekly_enabled', 'weekly_to', 'tin_a_samples'];
-r.get('/settings', wrap(async (req, res) => res.json(await getSettings())));
+const EDITABLE = ['articles_per_day', 'daily_hour', 'min_relevance', 'weekly_enabled', 'weekly_to', 'tin_a_samples', 'ai_mode', 'translate_provider'];
+const ALLOWED = { ai_mode: ['api', 'claude_plan', 'free'], translate_provider: ['deepl', 'google'] };
+// Kèm cho giao diện biết khóa nào đã đặt trong biến môi trường (không trả giá trị khóa).
+const withEnv = s => ({ ...s, env: { anthropic: !!config.anthropic.key, deepl: !!config.deeplKey, google: !!config.googleTranslateKey, agent: !!config.agentToken } });
+r.get('/settings', wrap(async (req, res) => res.json(withEnv(await getSettings()))));
 r.put('/settings', wrap(async (req, res) => {
-  for (const k of EDITABLE) if (req.body[k] !== undefined) await setSetting(k, req.body[k]);
-  res.json(await getSettings());
+  for (const k of EDITABLE) {
+    if (req.body[k] === undefined) continue;
+    if (ALLOWED[k] && !ALLOWED[k].includes(req.body[k])) return res.status(400).json({ error: `Giá trị không hợp lệ cho ${k}` });
+    await setSetting(k, req.body[k]);
+  }
+  res.json(withEnv(await getSettings()));
 }));
 r.get('/sources', wrap(async (req, res) => res.json(await q('SELECT * FROM sources ORDER BY region, name'))));
 r.post('/sources', wrap(async (req, res) => {

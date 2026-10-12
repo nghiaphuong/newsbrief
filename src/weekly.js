@@ -4,6 +4,7 @@ const { Document, Packer, Paragraph, TextRun, HeadingLevel, ExternalHyperlink, A
 const config = require('./config');
 const { q, getSettings } = require('./db');
 const ai = require('./ai');
+const { modeOf } = require('./pipeline');
 const { ymd, viDate, addDays } = require('./util');
 
 const FONT = 'Times New Roman';
@@ -29,12 +30,25 @@ function paras(text, opts = {}) {
 
 function h(text, level) { return new Paragraph({ heading: level, children: [new TextRun({ text, font: FONT, bold: true })], spacing: { before: 240, after: 120 } }); }
 
+// Tổng quan tuần không dùng AI: thống kê theo lĩnh vực + các tin liên quan nhất.
+function simpleOverview(label, arts) {
+  const n = c => arts.filter(a => (a.category || 'chinh-tri') === c).length;
+  const top = [...arts].sort((a, b) => (b.relevance || 0) - (a.relevance || 0)).slice(0, 8);
+  return [`Tuần ${label} có ${arts.length} tin: chính trị – đối ngoại ${n('chinh-tri')}, kinh tế ${n('kinh-te')}, văn hóa – xã hội ${n('van-hoa-xa-hoi')}.`,
+    'Các tin đáng chú ý nhất:',
+    ...top.map(a => `• ${a.title_vi || a.title_original} (${a.source_name}, ${viDate(a.brief_date)})`)].join('\n');
+}
+
 async function buildWeeklyDocx(from, to) {
   const arts = await q("SELECT * FROM articles WHERE status = 'done' AND brief_date BETWEEN ? AND ? ORDER BY brief_date, relevance DESC", [from, to]);
   arts.forEach(a => { a.key_figures = typeof a.key_figures === 'string' ? JSON.parse(a.key_figures || '[]') : (a.key_figures || []); });
   const label = `${viDate(from)} – ${viDate(to)}`;
   let overview = '';
-  if (arts.length) { try { overview = await ai.weeklyOverview(label, arts); } catch (e) { overview = `(Không tạo được tổng quan tự động: ${e.message})`; } }
+  if (arts.length) {
+    if (modeOf(await getSettings()) === 'api') {
+      try { overview = await ai.weeklyOverview(label, arts); } catch (e) { overview = `(Không tạo được tổng quan tự động: ${e.message})`; }
+    } else overview = simpleOverview(label, arts);
+  }
   const dailies = await q("SELECT * FROM digests WHERE kind = 'daily' AND brief_date BETWEEN ? AND ? ORDER BY brief_date", [from, to]);
 
   const children = [

@@ -2,3 +2,5 @@ node_modules/
 .env
 *.log
 tmp/
+.newsbrief/
+.newsbrief-agent.env

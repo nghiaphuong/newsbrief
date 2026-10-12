@@ -3,7 +3,8 @@ const { q, getSettings } = require('./db');
 const ai = require('./ai');
 const { gdeltSearch, extractArticle, hash, domainOf } = require('./fetcher');
 const { ymd, addDays, toMysql } = require('./util');
-const { processOne } = require('./pipeline');
+const { processOne, modeOf } = require('./pipeline');
+const { compileDigest } = require('./heuristic');
 
 function parseFigs(a) { a.key_figures = typeof a.key_figures === 'string' ? JSON.parse(a.key_figures || '[]') : (a.key_figures || []); return a; }
 
@@ -57,7 +58,11 @@ async function topicSummary({ topic, days = 7, length = 'medium', scan = false }
   const arts = await findArticles(topic, from, to);
   if (!arts.length) return { content: `Không tìm thấy tin nào về "${topic}" trong giai đoạn ${from} – ${to}. Hãy thử từ khóa khác hoặc bật "Quét thêm nguồn mới".`, articles: [], from, to };
   arts.sort((a, b) => String(a.brief_date).localeCompare(String(b.brief_date)));
-  const content = await ai.topicDigest(topic, from, to, arts, length);
+  const mode = modeOf(await getSettings());
+  // Chỉ chế độ Claude API viết bài tổng hợp bằng AI; các chế độ khác ghép danh sách tin A theo lĩnh vực.
+  const content = mode === 'api'
+    ? await ai.topicDigest(topic, from, to, arts, length)
+    : compileDigest(`Tổng hợp chủ đề "${topic}" (${from} – ${to})`, arts, 'Danh sách tin A liên quan, ghép tự động (không dùng AI ở chế độ hiện tại).');
   const r = await q("INSERT INTO digests (kind, topic, date_from, date_to, length_opt, content_vi, article_ids) VALUES ('topic', ?, ?, ?, ?, ?, ?)",
     [topic.slice(0, 290), from, to, length, content, JSON.stringify(arts.map(a => a.id))]);
   return { id: r.insertId, content, from, to, articles: arts.map(a => ({ id: a.id, title: a.title_vi || a.title_original, source: a.source_name, date: a.brief_date, url: a.url })) };
