@@ -192,7 +192,7 @@ async function openArticle(id, readerSel, keepTab = false) {
       ? `<div class="tab-tools"><button class="btn small" data-copy="trans">${esc(t('copy.trans'))}</button><button class="btn ghost small admin-only" data-translate>${esc(t('trans.retranslate'))}</button></div><div class="prose" lang="vi">${md(a.translation_vi)}</div>`
       : a.translate_requested
         ? `<p class="empty">${esc(t('trans.requested'))}</p>`
-        : `<p class="empty">${esc(t('trans.notYet'))}</p><div class="tab-tools admin-only"><button class="btn small" data-translate>${esc(t('trans.full'))}</button></div>`}</div>
+        : `<p class="empty">${esc(t(state.admin ? 'trans.notYet' : 'trans.notYetViewer'))}</p><div class="tab-tools admin-only"><button class="btn small" data-translate>${esc(t('trans.full'))}</button></div>`}</div>
     <div data-panel="orig" hidden><div class="tab-tools"><button class="btn small" data-copy="orig">${esc(t('copy.orig'))}</button></div><div class="prose" lang="${a.lang === 'no' ? 'nb' : 'en'}">${md(a.content_original)}</div></div>
     <div data-panel="figs" hidden><div class="tab-tools"><button class="btn small" data-copy="figs">${esc(t('copy.figs'))}</button></div>
       ${figs.length ? `<ul class="figs" lang="vi">${figs.map(f => `<li><span class="v">${esc(f.figure)}</span><span class="c">${esc(f.context)}</span><span class="s">${esc(t('figs.source', { src: f.source }))}${f.type ? ' · ' + esc(f.type) : ''}</span></li>`).join('')}</ul>` : `<p class="empty">${esc(t('figs.none'))}</p>`}</div>
