@@ -26,7 +26,7 @@
 - Chỉ dịch/tóm tắt từ văn bản nguồn; không bịa nguồn, không suy diễn.
 - Giữ nguyên mọi số liệu cùng nguồn trích dẫn/dự báo; số liệu được tách riêng để dễ đưa vào báo cáo.
 - Chỉ lấy bài đọc được toàn văn: bỏ qua nguồn thu phí (paywall) và bài chỉ tải được trích đoạn (dưới 1.500 ký tự).
-- Trang có đăng nhập và `noindex` vì lưu toàn văn bài báo để sử dụng nội bộ.
+- Mặc định **xem không cần đăng nhập** (chỉ xem, tìm kiếm, đọc, sao chép); cập nhật, dịch, tổng hợp, cài đặt luôn cần đăng nhập bằng `APP_PASSWORD`. Bỏ chọn "Cho phép xem không cần đăng nhập" trong Cài đặt để bắt buộc đăng nhập. Trang luôn `noindex`.
 
 ## Triển khai trên Hostinger (Node.js Web App)
 1. hPanel → Databases → tạo database MySQL + user.

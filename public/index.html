@@ -21,6 +21,7 @@
     <label>Mật khẩu<input type="password" id="pw" autocomplete="current-password" required></label>
     <button class="btn primary" type="submit">Đăng nhập</button>
     <p class="err" id="loginErr"></p>
+    <a href="#day" class="login-back" id="loginBack" hidden>‹ Quay lại xem không cần đăng nhập</a>
   </form>
 </div>
 
@@ -49,13 +50,13 @@
           <p class="auto-note" id="autoNote">Tự động cập nhật vào 8:00 sáng giờ Na Uy</p>
           <div class="day-actions">
             <input type="date" id="datePick" aria-label="Chọn ngày">
-            <button class="btn primary" id="runBtn">Cập nhật ngay</button>
+            <button class="btn primary admin-only" id="runBtn">Cập nhật ngay</button>
           </div>
           <div class="progress" id="progress" hidden><div class="bar"><i id="progBar"></i></div><span id="progText"></span></div>
         </header>
         <details class="digest" id="digestBox">
           <summary><span>Tổng hợp tin trong ngày</span><small id="digestMeta"></small></summary>
-          <div class="digest-tools">
+          <div class="digest-tools admin-only">
             <select id="digestLen"><option value="short">Nửa trang</option><option value="medium">1 trang</option><option value="long">2 trang</option></select>
             <button class="btn small" id="digestRegen">Tạo lại</button>
             <button class="btn small" id="digestCopy">Sao chép</button>
@@ -77,7 +78,8 @@
     <section class="view" id="view-topic" hidden>
       <div class="pane wide">
         <h2 class="view-title">Tổng hợp theo chủ đề</h2>
-        <form class="topic-form" id="topicForm">
+        <p class="empty viewer-only">Đăng nhập quản trị để tạo bản tổng hợp mới; bên dưới là các bản đã lưu.</p>
+        <form class="topic-form admin-only" id="topicForm">
           <label class="grow">Chủ đề<input id="tTopic" placeholder="Ví dụ: Quỹ Dầu mỏ Na Uy đầu tư vào châu Á" required></label>
           <label>Khoảng thời gian
             <select id="tDays"><option value="1">1 ngày</option><option value="3">3 ngày</option><option value="7" selected>7 ngày</option><option value="14">14 ngày</option><option value="30">30 ngày</option><option value="90">90 ngày</option><option value="365">1 năm</option></select>
@@ -135,6 +137,7 @@
           <label>Ngưỡng liên quan tối thiểu (0–100) <small>Dùng khi Claude chấm điểm (chế độ 1 và 2).</small><input type="number" min="0" max="100" id="stMin"></label>
           <label>Email nhận bản tin tuần<input type="email" id="stMail"></label>
           <label class="check"><input type="checkbox" id="stWeekly"> Gửi email bản tin tuần (sáng thứ Hai)</label>
+          <label class="check full"><input type="checkbox" id="stPublic"> <span>Cho phép xem không cần đăng nhập (mặc định). <small>Khách chỉ xem, tìm kiếm, đọc và sao chép tin; cập nhật, dịch, tổng hợp và cài đặt vẫn cần đăng nhập. Bỏ chọn để chuyển về chế độ bắt buộc đăng nhập.</small> <em class="missing" id="stPublicWarn" hidden>⚠ Chưa đặt APP_PASSWORD trên server nên ai vào cũng có quyền quản trị.</em></span></label>
           <label class="full">Mẫu tin A tham khảo <small>Dán vài mẫu tin A; Claude sẽ bắt chước cấu trúc và văn phong (không áp dụng cho chế độ miễn phí).</small><textarea id="stSamples" rows="8"></textarea></label>
           <div class="full row"><button class="btn primary" type="submit">Lưu cài đặt</button><span class="saved" id="stSaved"></span></div>
         </form>

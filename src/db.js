@@ -26,6 +26,8 @@ const DEFAULT_SETTINGS = {
   weekly_to: config.weeklyTo,
   // api | claude_plan | free. Mặc định claude_plan: rẻ nhất khi đã có gói Claude Team/Pro (không phát sinh phí thêm).
   ai_mode: 'claude_plan',
+  // '1' = ai cũng xem được không cần đăng nhập (chỉ xem); '0' = phải đăng nhập mới xem
+  public_access: '1',
 };
 
 // Nâng cấp CSDL đã tạo từ phiên bản cũ (chỉ chạy khi còn thiếu).

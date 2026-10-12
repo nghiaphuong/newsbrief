@@ -26,11 +26,18 @@ r.post('/login', (req, res) => {
   res.status(401).json({ error: 'Sai mật khẩu' });
 });
 r.post('/logout', (req, res) => { res.clearCookie(auth.COOKIE); res.json({ ok: true }); });
+// Chế độ công khai (mặc định, Cài đặt → "Cho phép xem không cần đăng nhập"): khách chỉ được các yêu cầu GET
+// đọc dữ liệu dưới đây; mọi thao tác tốn phí hoặc thay đổi dữ liệu (cập nhật, dịch, tổng hợp, cài đặt, xóa) vẫn cần đăng nhập.
+const PUBLIC_GET = [/^\/articles$/, /^\/articles\/\d+$/, /^\/articles\/\d+\/translate$/, /^\/calendar$/, /^\/digest\/daily$/, /^\/digests$/, /^\/digests\/\d+$/, /^\/run\/status$/];
+const isAdmin = req => !config.appPassword || auth.verify(req.cookies[auth.COOKIE]);
+// Lỗi CSDL không được làm trang trắng: coi như công khai (mặc định) và 8 giờ.
+const viewSettings = () => getSettings().then(s => ({ publicAccess: s.public_access !== '0', dailyHour: parseInt(s.daily_hour || '8', 10) }))
+  .catch(() => ({ publicAccess: true, dailyHour: 8 }));
+
 r.get('/me', wrap(async (req, res) => {
-  const loggedIn = !config.appPassword || auth.verify(req.cookies[auth.COOKIE]);
-  // Không để lỗi CSDL làm hỏng trang đăng nhập/khởi động: mặc định 8 giờ.
-  const dailyHour = loggedIn ? await getSettings().then(s => parseInt(s.daily_hour || '8', 10)).catch(() => 8) : 8;
-  res.json({ loggedIn, today: ymd(), dailyHour });
+  const admin = isAdmin(req);
+  const { publicAccess, dailyHour } = await viewSettings();
+  res.json({ loggedIn: admin, admin, publicAccess, today: ymd(), dailyHour });
 }));
 
 // ---------- Cron dự phòng (Hostinger Cron Jobs gọi URL này) ----------
@@ -82,8 +89,12 @@ agentApi.get('/jobs', wrap(async (req, res) => res.json(await agent.getJobs({ li
 agentApi.post('/results', wrap(async (req, res) => res.json(await agent.applyResults(req.body))));
 r.use('/agent', agentApi);
 
-// ---------- Từ đây trở xuống cần đăng nhập ----------
-r.use(auth.requireLogin);
+// ---------- Từ đây trở xuống: quản trị cần đăng nhập; khách xem được phần đọc nếu bật chế độ công khai ----------
+r.use((req, res, next) => {
+  if (isAdmin(req)) return next();
+  if (req.method !== 'GET' || !PUBLIC_GET.some(p => p.test(req.path))) return res.status(401).json({ error: 'Chưa đăng nhập' });
+  viewSettings().then(v => (v.publicAccess ? next() : res.status(401).json({ error: 'Chưa đăng nhập' })));
+});
 
 function buildArticleQuery(qs, cols = LIST_COLS) {
   const w = []; const p = [];
@@ -178,12 +189,12 @@ r.post('/weekly/send', wrap(async (req, res) => {
 }));
 
 // ---------- Cài đặt & nguồn ----------
-const EDITABLE = ['articles_per_day', 'daily_hour', 'min_relevance', 'weekly_enabled', 'weekly_to', 'tin_a_samples', 'ai_mode'];
-const ALLOWED = { ai_mode: ['api', 'claude_plan', 'free'] };
+const EDITABLE = ['articles_per_day', 'daily_hour', 'min_relevance', 'weekly_enabled', 'weekly_to', 'tin_a_samples', 'ai_mode', 'public_access'];
+const ALLOWED = { ai_mode: ['api', 'claude_plan', 'free'], public_access: ['0', '1'] };
 // Kèm cho giao diện biết khóa nào đã đặt trong biến môi trường (không trả giá trị khóa) và hạn mức Google đã dùng.
 const withEnv = async s => ({
   ...s,
-  env: { anthropic: !!config.anthropic.key, google: !!config.googleTranslateKey, agent: !!config.agentToken },
+  env: { appPassword: !!config.appPassword, anthropic: !!config.anthropic.key, google: !!config.googleTranslateKey, agent: !!config.agentToken },
   translate_usage: await translator.usage().catch(() => null),
 });
 r.get('/settings', wrap(async (req, res) => res.json(await withEnv(await getSettings()))));

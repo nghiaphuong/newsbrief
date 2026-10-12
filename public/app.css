@@ -98,6 +98,11 @@ label.check { flex-direction: row; align-items: center; gap: 8px; color: var(--i
 .day-num { font: 600 52px/0.9 var(--read); color: var(--fjord); letter-spacing: -0.02em; font-variant-numeric: lining-nums; }
 .day-week { font-weight: 600; font-size: 15px; }
 .day-count { color: var(--muted); font-size: 13px; }
+/* Chế độ công khai: khách không thấy các nút quản trị */
+.viewer .admin-only { display: none !important; }
+body:not(.viewer) .viewer-only { display: none !important; }
+.login-back { display: block; margin-top: 12px; font-size: 13px; color: var(--muted); text-align: center; }
+#stPublicWarn { font-style: normal; font-size: 12px; color: var(--lacquer); }
 .auto-note { color: var(--muted); font-size: 12.5px; margin: 8px 0 0; }
 .day-actions { display: flex; gap: 8px; margin-top: 14px; }
 .day-actions input { flex: 1; }

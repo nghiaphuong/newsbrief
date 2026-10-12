@@ -44,16 +44,27 @@ async function copy(text, label) {
 }
 
 // ---------- Đăng nhập ----------
-function showLogin() { $('#app').hidden = true; $('#login').hidden = false; $('#pw').focus(); }
+function showLogin() {
+  $('#app').hidden = true; $('#login').hidden = false;
+  $('#loginBack').hidden = !state.publicAccess; // chế độ công khai: cho phép quay lại xem không đăng nhập
+  $('#pw').focus();
+}
 $('#loginForm').addEventListener('submit', async e => {
   e.preventDefault();
-  try { await api('/login', { method: 'POST', body: { password: $('#pw').value } }); $('#login').hidden = true; boot(); }
+  try { await api('/login', { method: 'POST', body: { password: $('#pw').value } }); $('#login').hidden = true; $('#pw').value = ''; boot(); }
   catch (err) { $('#loginErr').textContent = err.message; }
 });
-$('#logoutBtn').onclick = async () => { await api('/logout', { method: 'POST' }); showLogin(); };
+$('#loginBack').onclick = e => { e.preventDefault(); $('#login').hidden = true; $('#app').hidden = false; };
+// Quản trị: đăng xuất (nếu chế độ công khai đang bật thì quay về chế độ chỉ xem). Khách: mở trang đăng nhập.
+$('#logoutBtn').onclick = async () => {
+  if (!state.admin) return showLogin();
+  await api('/logout', { method: 'POST' });
+  boot();
+};
 
 // ---------- Điều hướng ----------
 function go(view) {
+  if (view === 'settings' && !state.admin) return showLogin(); // khách bấm "Cài đặt" → đăng nhập quản trị
   $$('.view').forEach(v => v.hidden = v.id !== 'view-' + view);
   $$('[data-view]').forEach(a => a.classList.toggle('active', a.dataset.view === view));
   if (view === 'topic') loadTopicHistory();
@@ -159,15 +170,15 @@ async function openArticle(id, readerSel) {
     </div>
     <div data-panel="tina"><div class="tab-tools"><button class="btn small" data-copy="tina">Sao chép tin A</button></div><div class="prose tin-a">${md(a.tin_a_vi) || '<p>Chưa có.</p>'}</div></div>
     <div data-panel="trans" hidden>${a.translation_vi
-      ? `<div class="tab-tools"><button class="btn small" data-copy="trans">Sao chép bản dịch</button><button class="btn ghost small" data-translate>Dịch lại</button></div><div class="prose">${md(a.translation_vi)}</div>`
+      ? `<div class="tab-tools"><button class="btn small" data-copy="trans">Sao chép bản dịch</button><button class="btn ghost small admin-only" data-translate>Dịch lại</button></div><div class="prose">${md(a.translation_vi)}</div>`
       : a.translate_requested
         ? '<p class="empty">Đã yêu cầu dịch toàn văn. Bản dịch sẽ có sau lượt chạy Claude (gói Team/Pro) tiếp theo.</p>'
-        : `<p class="empty">Bài này chưa được dịch toàn văn (chỉ dịch khi cần để tiết kiệm chi phí).</p><div class="tab-tools"><button class="btn small" data-translate>Dịch toàn văn</button></div>`}</div>
+        : `<p class="empty">Bài này chưa được dịch toàn văn (chỉ dịch khi cần để tiết kiệm chi phí).</p><div class="tab-tools admin-only"><button class="btn small" data-translate>Dịch toàn văn</button></div>`}</div>
     <div data-panel="orig" hidden><div class="tab-tools"><button class="btn small" data-copy="orig">Sao chép nguyên văn</button></div><div class="prose" lang="${a.lang === 'no' ? 'nb' : 'en'}">${md(a.content_original)}</div></div>
     <div data-panel="figs" hidden><div class="tab-tools"><button class="btn small" data-copy="figs">Sao chép số liệu</button></div>
       ${figs.length ? `<ul class="figs">${figs.map(f => `<li><span class="v">${esc(f.figure)}</span><span class="c">${esc(f.context)}</span><span class="s">Nguồn: ${esc(f.source)}${f.type ? ' · ' + esc(f.type) : ''}</span></li>`).join('')}</ul>` : '<p class="empty">Bài không có số liệu định lượng.</p>'}</div>
     <p class="reason">Mức liên quan ${a.relevance ?? '–'}/100${a.relevance_reason ? ' · ' + esc(a.relevance_reason) : ''}
-      · <button class="btn ghost small" data-reprocess>Tóm tắt lại</button></p>
+<span class="admin-only"> · <button class="btn ghost small" data-reprocess>Tóm tắt lại</button></span></p>
   </article>`;
   const texts = {
     tina: a.tin_a_vi, trans: `${a.title_vi || ''}\n\n${a.translation_vi || ''}\n\nNguồn: ${a.source_name} – ${a.url}`, orig: `${a.title_original}\n\n${a.content_original || ''}\n\n${a.url}`,
@@ -209,7 +220,7 @@ async function openArticle(id, readerSel) {
 async function loadDigest(open) {
   const d = await api('/digest/daily?date=' + state.date).catch(() => null);
   $('#digestBox').hidden = !d && !state.dayItems.length;
-  $('#digestBody').innerHTML = d ? md(d.content_vi) : '<p>Chưa có bản tổng hợp. Bấm "Tạo lại" để tạo.</p>';
+  $('#digestBody').innerHTML = d ? md(d.content_vi) : (state.admin ? '<p>Chưa có bản tổng hợp. Bấm "Tạo lại" để tạo.</p>' : '<p>Chưa có bản tổng hợp.</p>');
   $('#digestMeta').textContent = d ? `cập nhật ${String(d.created_at).slice(11, 16)}` : '';
   $('#digestBox')._text = d?.content_vi || '';
   if (open) $('#digestBox').open = true;
@@ -317,6 +328,8 @@ async function loadSettings() {
   const u = s.translate_usage;
   $('#stUsage').textContent = u ? `Tháng ${u.period} (giờ Thái Bình Dương): đã dùng ${u.used.toLocaleString('vi-VN')} / ${u.limit.toLocaleString('vi-VN')} ký tự. Làm mới lúc ${u.resetAtOslo} (giờ Oslo).` : '';
   $('#stN').value = s.articles_per_day; $('#stHour').value = s.daily_hour; $('#stMin').value = s.min_relevance;
+  $('#stPublic').checked = s.public_access !== '0';
+  $('#stPublicWarn').hidden = !!(s.env && s.env.appPassword);
   $('#stMail').value = s.weekly_to; $('#stWeekly').checked = s.weekly_enabled === '1'; $('#stSamples').value = s.tin_a_samples || '';
   const d = new Date(state.today + 'T12:00:00Z'); const dow = (d.getUTCDay() + 6) % 7;
   if (!$('#wFrom').value) { $('#wFrom').value = addDays(state.today, -dow - 7); $('#wTo').value = addDays(state.today, -dow - 1); }
@@ -334,8 +347,8 @@ function showEnvHints() {
 $('#settingsForm').addEventListener('submit', async e => {
   e.preventDefault();
   const mode = $('#stMode input[name="ai_mode"]:checked')?.value || 'claude_plan';
-  await api('/settings', { method: 'PUT', body: { ai_mode: mode, articles_per_day: $('#stN').value, daily_hour: $('#stHour').value, min_relevance: $('#stMin').value, weekly_to: $('#stMail').value, weekly_enabled: $('#stWeekly').checked ? '1' : '0', tin_a_samples: $('#stSamples').value } });
-  state.mode = mode;
+  await api('/settings', { method: 'PUT', body: { ai_mode: mode, public_access: $('#stPublic').checked ? '1' : '0', articles_per_day: $('#stN').value, daily_hour: $('#stHour').value, min_relevance: $('#stMin').value, weekly_to: $('#stMail').value, weekly_enabled: $('#stWeekly').checked ? '1' : '0', tin_a_samples: $('#stSamples').value } });
+  state.mode = mode; state.publicAccess = $('#stPublic').checked;
   showAutoNote($('#stHour').value);
   $('#stSaved').textContent = 'Đã lưu.'; setTimeout(() => $('#stSaved').textContent = '', 2500);
 });
@@ -380,13 +393,19 @@ function showAutoNote(hour) {
 async function boot() {
   const me = await api('/me').catch(() => null);
   if (!me) return;
-  if (!me.loggedIn) return showLogin();
+  state.admin = !!me.admin; state.publicAccess = !!me.publicAccess;
+  if (!me.admin && !me.publicAccess) return showLogin();
+  // Khách (chế độ công khai): ẩn các nút tốn phí/thay đổi dữ liệu (lớp .admin-only)
+  document.body.classList.toggle('viewer', !me.admin);
+  $('#logoutBtn').textContent = me.admin ? 'Đăng xuất' : 'Đăng nhập quản trị';
+  $('#login').hidden = true;
   $('#app').hidden = false;
   state.today = me.today; state.calMonth = me.today.slice(0, 7);
   showAutoNote(me.dailyHour);
   await setDate(me.today);
   const v = location.hash.slice(1);
-  if (['topic', 'search', 'settings'].includes(v)) go(v);
+  if (['topic', 'search'].includes(v) || (v === 'settings' && me.admin)) go(v);
+  else go('day');
   pollRun();
 }
 boot();
