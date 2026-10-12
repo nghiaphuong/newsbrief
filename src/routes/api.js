@@ -15,6 +15,8 @@ const jobs = new Map(); // job chạy nền (tổng hợp chủ đề…)
 
 const LIST_COLS = 'id, url, source_name, source_domain, lang, title_original, title_vi, published_at, brief_date, full_text, tin_a_vi, category, relations, relevance, status, error_msg';
 const fig = a => { if (a && typeof a.key_figures === 'string') a.key_figures = JSON.parse(a.key_figures || '[]'); return a; };
+// Thông báo theo ngôn ngữ giao diện (trình duyệt gửi header X-Lang: en | vi)
+const L = (req, vi, en) => (req.get('x-lang') === 'en' ? en : vi);
 const wrap = fn => (req, res) => fn(req, res).catch(e => { console.error(e); res.status(500).json({ error: e.message }); });
 
 // ---------- Đăng nhập ----------
@@ -23,7 +25,7 @@ r.post('/login', (req, res) => {
     res.cookie(auth.COOKIE, auth.makeToken(), { httpOnly: true, sameSite: 'lax', secure: req.secure || req.headers['x-forwarded-proto'] === 'https', maxAge: 30 * 24 * 3600 * 1000 });
     return res.json({ ok: true });
   }
-  res.status(401).json({ error: 'Sai mật khẩu' });
+  res.status(401).json({ error: L(req, 'Sai mật khẩu', 'Wrong password') });
 });
 r.post('/logout', (req, res) => { res.clearCookie(auth.COOKIE); res.json({ ok: true }); });
 // Chế độ công khai (mặc định, Cài đặt → "Cho phép xem không cần đăng nhập"): khách chỉ được các yêu cầu GET
@@ -92,8 +94,8 @@ r.use('/agent', agentApi);
 // ---------- Từ đây trở xuống: quản trị cần đăng nhập; khách xem được phần đọc nếu bật chế độ công khai ----------
 r.use((req, res, next) => {
   if (isAdmin(req)) return next();
-  if (req.method !== 'GET' || !PUBLIC_GET.some(p => p.test(req.path))) return res.status(401).json({ error: 'Chưa đăng nhập' });
-  viewSettings().then(v => (v.publicAccess ? next() : res.status(401).json({ error: 'Chưa đăng nhập' })));
+  if (req.method !== 'GET' || !PUBLIC_GET.some(p => p.test(req.path))) return res.status(401).json({ error: L(req, 'Chưa đăng nhập', 'Not signed in') });
+  viewSettings().then(v => (v.publicAccess ? next() : res.status(401).json({ error: L(req, 'Chưa đăng nhập', 'Not signed in') })));
 });
 
 function buildArticleQuery(qs, cols = LIST_COLS) {
@@ -118,17 +120,17 @@ r.get('/articles', wrap(async (req, res) => {
 }));
 r.get('/articles/:id', wrap(async (req, res) => {
   const a = (await q('SELECT * FROM articles WHERE id = ?', [req.params.id]))[0];
-  a ? res.json(fig(a)) : res.status(404).json({ error: 'Không tìm thấy' });
+  a ? res.json(fig(a)) : res.status(404).json({ error: L(req, 'Không tìm thấy', 'Not found') });
 }));
 r.post('/articles/:id/reprocess', wrap(async (req, res) => {
   const a = (await q('SELECT * FROM articles WHERE id = ?', [req.params.id]))[0];
-  if (!a) return res.status(404).json({ error: 'Không tìm thấy' });
+  if (!a) return res.status(404).json({ error: L(req, 'Không tìm thấy', 'Not found') });
   await pipeline.processOne(a, await getSettings());
   res.json(fig((await q('SELECT * FROM articles WHERE id = ?', [a.id]))[0]));
 }));
 r.post('/articles/:id/translate', wrap(async (req, res) => {
   const a = (await q('SELECT * FROM articles WHERE id = ?', [req.params.id]))[0];
-  if (!a) return res.status(404).json({ error: 'Không tìm thấy' });
+  if (!a) return res.status(404).json({ error: L(req, 'Không tìm thấy', 'Not found') });
   res.json(await pipeline.startTranslate(a, await getSettings()));
 }));
 r.get('/articles/:id/translate', (req, res) => res.json(pipeline.translateStatus(Number(req.params.id))));
@@ -152,7 +154,7 @@ r.post('/digest/daily', wrap(async (req, res) => {
 
 // ---------- Chạy cập nhật ----------
 r.post('/run', wrap(async (req, res) => {
-  if (pipeline.status().running) return res.status(409).json({ error: 'Đang cập nhật…', status: pipeline.status() });
+  if (pipeline.status().running) return res.status(409).json({ error: L(req, 'Đang cập nhật…', 'An update is already running…'), status: pipeline.status() });
   pipeline.runDaily('manual', { limit: req.body.limit, date: req.body.date }).catch(e => console.error('Manual run:', e.message));
   setTimeout(() => res.json({ ok: true, status: pipeline.status() }), 300);
 }));
@@ -163,7 +165,7 @@ r.get('/runs/:id', wrap(async (req, res) => res.json((await q('SELECT * FROM run
 // ---------- Tổng hợp theo chủ đề (chạy nền) ----------
 r.post('/topic', wrap(async (req, res) => {
   const { topic, days, length, scan } = req.body;
-  if (!topic || !topic.trim()) return res.status(400).json({ error: 'Nhập chủ đề' });
+  if (!topic || !topic.trim()) return res.status(400).json({ error: L(req, 'Nhập chủ đề', 'Enter a topic') });
   const id = Date.now().toString(36);
   jobs.set(id, { state: 'running' });
   topicSummary({ topic: topic.trim(), days: days || 7, length: length || 'medium', scan: !!scan })
@@ -201,7 +203,7 @@ r.get('/settings', wrap(async (req, res) => res.json(await withEnv(await getSett
 r.put('/settings', wrap(async (req, res) => {
   for (const k of EDITABLE) {
     if (req.body[k] === undefined) continue;
-    if (ALLOWED[k] && !ALLOWED[k].includes(req.body[k])) return res.status(400).json({ error: `Giá trị không hợp lệ cho ${k}` });
+    if (ALLOWED[k] && !ALLOWED[k].includes(req.body[k])) return res.status(400).json({ error: L(req, `Giá trị không hợp lệ cho ${k}`, `Invalid value for ${k}`) });
     await setSetting(k, req.body[k]);
   }
   res.json(await withEnv(await getSettings()));
@@ -209,7 +211,7 @@ r.put('/settings', wrap(async (req, res) => {
 r.get('/sources', wrap(async (req, res) => res.json(await q('SELECT * FROM sources ORDER BY region, name'))));
 r.post('/sources', wrap(async (req, res) => {
   const { name, url, lang, region, paywall, filter_keywords } = req.body;
-  if (!name || !/^https?:\/\//.test(url || '')) return res.status(400).json({ error: 'Cần tên và URL RSS hợp lệ' });
+  if (!name || !/^https?:\/\//.test(url || '')) return res.status(400).json({ error: L(req, 'Cần tên và URL RSS hợp lệ', 'A name and a valid RSS URL are required') });
   await q('INSERT INTO sources (name, url, lang, region, paywall, filter_keywords) VALUES (?,?,?,?,?,?)', [name, url, lang || 'en', region || 'intl', paywall ? 1 : 0, filter_keywords === false ? 0 : 1]);
   res.json({ ok: true });
 }));

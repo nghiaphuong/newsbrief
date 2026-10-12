@@ -70,7 +70,15 @@ label.check { flex-direction: row; align-items: center; gap: 8px; color: var(--i
 .nav a { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: var(--r-sm); cursor: pointer; color: inherit; text-decoration: none; }
 .nav a:hover { background: rgba(255,255,255,.08); }
 .nav a.active { background: rgba(255,255,255,.14); color: #fff; font-weight: 600; }
-.logout { margin-top: auto; color: #B9CAD6 !important; align-self: flex-start; }
+.logout { color: #B9CAD6 !important; align-self: flex-start; }
+.rail-foot { margin-top: auto; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.rail .lang-toggle { color: #B9CAD6 !important; }
+.login-card .lang-toggle { align-self: center; }
+.mobile-only { display: none; }
+@media (max-width: 1180px) {
+  .mobile-only { display: inline-flex; margin-left: auto; align-self: flex-start; }
+  .rail .lang-toggle { display: none; }
+}
 
 /* Lịch nhỏ */
 .cal { background: rgba(255,255,255,.06); border-radius: var(--r-md); padding: 10px; font-size: 12px; }

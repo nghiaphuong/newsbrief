@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="vi">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#14324A">
-<title>NewsBrief · Bản tin đối ngoại</title>
+<title>NewsBrief · Foreign Affairs News Brief</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2314324A'/><path d='M18 46V18h6l16 18V18h6v28h-6L24 28v18z' fill='%23F5F7F8'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,25 +17,29 @@
   <form class="login-card" id="loginForm">
     <div class="brand-mark big">N</div>
     <h1>NewsBrief</h1>
-    <p>Bản tin đối ngoại Na Uy – Việt Nam – ASEAN</p>
-    <label>Mật khẩu<input type="password" id="pw" autocomplete="current-password" required></label>
-    <button class="btn primary" type="submit">Đăng nhập</button>
+    <p data-i18n="login.tagline">Foreign affairs news brief: Norway – Vietnam – ASEAN</p>
+    <label><span data-i18n="login.password">Password</span><input type="password" id="pw" autocomplete="current-password" required></label>
+    <button class="btn primary" type="submit" data-i18n="login.submit">Sign in</button>
     <p class="err" id="loginErr"></p>
-    <a href="#day" class="login-back" id="loginBack" hidden>‹ Quay lại xem không cần đăng nhập</a>
+    <a href="#day" class="login-back" id="loginBack" hidden data-i18n="login.back">‹ Back to browsing without signing in</a>
+    <button type="button" class="btn ghost small lang-toggle" data-lang-toggle data-i18n="lang.switch" data-i18n-aria="lang.switchAria">Tiếng Việt</button>
   </form>
 </div>
 
 <div id="app" class="app" hidden>
   <aside class="rail">
-    <a class="brand" href="#day" id="homeLink" title="Về trang chủ (Bản tin ngày)"><div class="brand-mark">N</div><div><strong>NewsBrief</strong><span>Đại sứ quán Việt Nam tại Na Uy</span></div></a>
+    <a class="brand" href="#day" id="homeLink" data-i18n-title="brand.title"><div class="brand-mark">N</div><div><strong>NewsBrief</strong><span data-i18n="brand.sub">Embassy of Vietnam in Norway</span></div></a>
     <nav class="nav" id="nav">
-      <a data-view="day" class="active"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM4 9h16M8 3v4M16 3v4"/></svg><span>Bản tin ngày</span></a>
-      <a data-view="topic"><svg viewBox="0 0 24 24"><path d="M5 5h14M5 10h14M5 15h9M5 20h6"/></svg><span>Tổng hợp chủ đề</span></a>
-      <a data-view="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg><span>Lưu trữ & tìm kiếm</span></a>
-      <a data-view="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg><span>Cài đặt</span></a>
+      <a data-view="day" class="active"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM4 9h16M8 3v4M16 3v4"/></svg><span data-i18n="nav.day">Daily brief</span></a>
+      <a data-view="topic"><svg viewBox="0 0 24 24"><path d="M5 5h14M5 10h14M5 15h9M5 20h6"/></svg><span data-i18n="nav.topic">Topic digests</span></a>
+      <a data-view="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg><span data-i18n="nav.search">Archive &amp; search</span></a>
+      <a data-view="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg><span data-i18n="nav.settings">Settings</span></a>
     </nav>
     <div class="cal" id="cal"></div>
-    <button class="btn ghost small logout" id="logoutBtn">Đăng xuất</button>
+    <div class="rail-foot">
+      <button class="btn ghost small lang-toggle" data-lang-toggle data-i18n="lang.switch" data-i18n-aria="lang.switchAria">Tiếng Việt</button>
+      <button class="btn ghost small logout" id="logoutBtn">Sign out</button>
+    </div>
   </aside>
 
   <main class="main">
@@ -46,28 +50,29 @@
           <div class="day-title">
             <div class="day-num" id="dayNum"></div>
             <div><div class="day-week" id="dayWeek"></div><div class="day-count" id="dayCount"></div></div>
+            <button class="btn ghost small lang-toggle mobile-only" data-lang-toggle data-i18n="lang.switch" data-i18n-aria="lang.switchAria">Tiếng Việt</button>
           </div>
-          <p class="auto-note" id="autoNote">Tự động cập nhật vào 8:00 sáng giờ Na Uy</p>
+          <p class="auto-note" id="autoNote">Updates automatically at 8:00 a.m. Norway time</p>
           <div class="day-actions">
-            <input type="date" id="datePick" aria-label="Chọn ngày">
-            <button class="btn primary admin-only" id="runBtn">Cập nhật ngay</button>
+            <input type="date" id="datePick" data-i18n-aria="day.pickDate">
+            <button class="btn primary admin-only" id="runBtn" data-i18n="day.run">Update now</button>
           </div>
           <div class="progress" id="progress" hidden><div class="bar"><i id="progBar"></i></div><span id="progText"></span></div>
         </header>
         <details class="digest" id="digestBox">
-          <summary><span>Tổng hợp tin trong ngày</span><small id="digestMeta"></small></summary>
-          <div class="digest-tools admin-only">
-            <select id="digestLen"><option value="short">Nửa trang</option><option value="medium">1 trang</option><option value="long">2 trang</option></select>
-            <button class="btn small" id="digestRegen">Tạo lại</button>
-            <button class="btn small" id="digestCopy">Sao chép</button>
+          <summary><span data-i18n="digest.title">Daily digest</span><small id="digestMeta"></small></summary>
+          <div class="digest-tools">
+            <select id="digestLen" class="admin-only"><option value="short" data-i18n="len.short">Half page</option><option value="medium" data-i18n="len.medium">1 page</option><option value="long" data-i18n="len.long">2 pages</option></select>
+            <button class="btn small admin-only" id="digestRegen" data-i18n="digest.regen">Regenerate</button>
+            <button class="btn small" id="digestCopy" data-i18n="common.copy">Copy</button>
           </div>
           <div class="prose" id="digestBody"></div>
         </details>
         <div class="filters" id="dayFilters">
-          <button class="chip active" data-cat="">Tất cả</button>
-          <button class="chip" data-cat="chinh-tri">Chính trị</button>
-          <button class="chip" data-cat="kinh-te">Kinh tế</button>
-          <button class="chip" data-cat="van-hoa-xa-hoi">Văn hóa – XH</button>
+          <button class="chip active" data-cat="" data-i18n="cat.all">All</button>
+          <button class="chip" data-cat="chinh-tri" data-i18n="cat.chinh-tri">Politics</button>
+          <button class="chip" data-cat="kinh-te" data-i18n="cat.kinh-te">Economy</button>
+          <button class="chip" data-cat="van-hoa-xa-hoi" data-i18n="cat.van-hoa-xa-hoi">Culture &amp; society</button>
         </div>
         <ol class="items" id="dayList"></ol>
       </div>
@@ -77,21 +82,21 @@
     <!-- ===== TỔNG HỢP CHỦ ĐỀ ===== -->
     <section class="view" id="view-topic" hidden>
       <div class="pane wide">
-        <h2 class="view-title">Tổng hợp theo chủ đề</h2>
-        <p class="empty viewer-only">Đăng nhập quản trị để tạo bản tổng hợp mới; bên dưới là các bản đã lưu.</p>
+        <h2 class="view-title" data-i18n="topic.title">Topic digests</h2>
+        <p class="empty viewer-only" data-i18n="topic.viewerNote">Sign in as admin to create new digests; saved digests are listed below.</p>
         <form class="topic-form admin-only" id="topicForm">
-          <label class="grow">Chủ đề<input id="tTopic" placeholder="Ví dụ: Quỹ Dầu mỏ Na Uy đầu tư vào châu Á" required></label>
-          <label>Khoảng thời gian
-            <select id="tDays"><option value="1">1 ngày</option><option value="3">3 ngày</option><option value="7" selected>7 ngày</option><option value="14">14 ngày</option><option value="30">30 ngày</option><option value="90">90 ngày</option><option value="365">1 năm</option></select>
+          <label class="grow"><span data-i18n="topic.topic">Topic</span><input id="tTopic" data-i18n-ph="topic.ph" required></label>
+          <label><span data-i18n="topic.period">Period</span>
+            <select id="tDays"><option value="1" data-days="1"></option><option value="3" data-days="3"></option><option value="7" data-days="7" selected></option><option value="14" data-days="14"></option><option value="30" data-days="30"></option><option value="90" data-days="90"></option><option value="365" data-days="365"></option></select>
           </label>
-          <label>Độ dài
-            <select id="tLen"><option value="short">Nửa trang</option><option value="medium" selected>1 trang</option><option value="long">2 trang</option></select>
+          <label><span data-i18n="topic.length">Length</span>
+            <select id="tLen"><option value="short" data-i18n="len.short">Half page</option><option value="medium" selected data-i18n="len.medium">1 page</option><option value="long" data-i18n="len.long">2 pages</option></select>
           </label>
-          <label class="check"><input type="checkbox" id="tScan"> Quét thêm nguồn mới</label>
-          <button class="btn primary" type="submit" id="tBtn">Tổng hợp</button>
+          <label class="check"><input type="checkbox" id="tScan"> <span data-i18n="topic.scan">Also scan new sources</span></label>
+          <button class="btn primary" type="submit" id="tBtn" data-i18n="topic.submit">Create digest</button>
         </form>
         <article class="topic-result" id="topicResult" hidden></article>
-        <h3 class="sub">Các bản tổng hợp đã lưu</h3>
+        <h3 class="sub" data-i18n="topic.saved">Saved digests</h3>
         <ul class="history" id="topicHistory"></ul>
       </div>
     </section>
@@ -100,15 +105,15 @@
     <section class="view" id="view-search" hidden>
       <div class="pane list-pane">
         <header class="search-head">
-          <h2 class="view-title">Lưu trữ & tìm kiếm</h2>
+          <h2 class="view-title" data-i18n="search.title">Archive &amp; search</h2>
           <form id="searchForm" class="search-form">
-            <input id="sQ" placeholder="Từ khóa (Anh, Na Uy hoặc Việt)…" type="search">
+            <input id="sQ" data-i18n-ph="search.ph" type="search">
             <div class="seg" id="sRange">
-              <button type="button" data-r="day">Ngày</button><button type="button" data-r="week" class="active">Tuần</button><button type="button" data-r="month">Tháng</button><button type="button" data-r="all">Tất cả</button><button type="button" data-r="custom">Tùy chọn</button>
+              <button type="button" data-r="day" data-i18n="range.day">Day</button><button type="button" data-r="week" class="active" data-i18n="range.week">Week</button><button type="button" data-r="month" data-i18n="range.month">Month</button><button type="button" data-r="all" data-i18n="range.all">All</button><button type="button" data-r="custom" data-i18n="range.custom">Custom</button>
             </div>
             <div class="custom-range" id="sCustom" hidden><input type="date" id="sFrom"> – <input type="date" id="sTo"></div>
-            <select id="sCat"><option value="">Mọi lĩnh vực</option><option value="chinh-tri">Chính trị</option><option value="kinh-te">Kinh tế</option><option value="van-hoa-xa-hoi">Văn hóa – xã hội</option></select>
-            <button class="btn primary" type="submit">Tìm</button>
+            <select id="sCat"><option value="" data-i18n="cat.any">All fields</option><option value="chinh-tri" data-i18n="cat.chinh-tri">Politics</option><option value="kinh-te" data-i18n="cat.kinh-te">Economy</option><option value="van-hoa-xa-hoi" data-i18n="cat.van-hoa-xa-hoi">Culture &amp; society</option></select>
+            <button class="btn primary" type="submit" data-i18n="search.submit">Search</button>
           </form>
           <div class="day-count" id="sCount"></div>
         </header>
@@ -120,60 +125,61 @@
     <!-- ===== CÀI ĐẶT ===== -->
     <section class="view" id="view-settings" hidden>
       <div class="pane wide">
-        <h2 class="view-title">Cài đặt</h2>
+        <h2 class="view-title" data-i18n="settings.title">Settings</h2>
         <form class="settings" id="settingsForm">
           <fieldset class="full mode-pick" id="stMode">
-            <legend>Chế độ xử lý tin</legend>
+            <legend data-i18n="mode.legend">News processing mode</legend>
             <label class="mode"><input type="radio" name="ai_mode" value="api">
-              <span><strong>1. Claude API (dùng API credits)</strong><small>Xử lý ngay trên server. Ước tính khoảng 15–25 USD/tháng với 20 tin/ngày (Sonnet 5.5), tính theo lượng dùng tại console.anthropic.com.</small><em data-env="anthropic"></em></span></label>
+              <span><strong data-i18n="mode.api.title"></strong><small data-i18n="mode.api.desc"></small><em data-env="anthropic"></em></span></label>
             <label class="mode"><input type="radio" name="ai_mode" value="claude_plan">
-              <span><strong>2. Gói Claude Team/Pro (mặc định – không phát sinh thêm chi phí nếu đã có gói)</strong><small>Server chỉ thu thập và lọc tin; tác vụ Claude Code chạy theo lịch bằng tài khoản Claude của bạn sẽ chấm điểm, viết tin A, tổng hợp và dịch theo yêu cầu. Không tốn API credits, tính vào hạn mức của gói. Cách cài: xem docs/CLAUDE_PLAN.md.</small><em data-env="agent"></em></span></label>
+              <span><strong data-i18n="mode.plan.title"></strong><small data-i18n="mode.plan.desc"></small><em data-env="agent"></em></span></label>
             <label class="mode"><input type="radio" name="ai_mode" value="free">
-              <span><strong>3. Miễn phí, không dùng AI (Google Translate)</strong><small>Lọc tin bằng từ khóa; tiêu đề và đoạn mở đầu được dịch máy làm tin A; không trích số liệu; bản tổng hợp là danh sách ghép. App tự dừng dịch khi chạm 500.000 ký tự trong tháng tính phí của Google (giờ Thái Bình Dương) để không phát sinh phí.</small>
+              <span><strong data-i18n="mode.free.title"></strong><small data-i18n="mode.free.desc"></small>
                 <em data-env="translate"></em><small id="stUsage"></small></span></label>
           </fieldset>
-          <label>Số tin tối đa mỗi ngày<input type="number" min="1" max="60" id="stN"></label>
-          <label>Giờ cập nhật tự động (giờ Oslo)<input type="number" min="0" max="23" id="stHour"></label>
-          <label>Ngưỡng liên quan tối thiểu (0–100) <small>Dùng khi Claude chấm điểm (chế độ 1 và 2).</small><input type="number" min="0" max="100" id="stMin"></label>
-          <label>Email nhận bản tin tuần<input type="email" id="stMail"></label>
-          <label class="check"><input type="checkbox" id="stWeekly"> Gửi email bản tin tuần (sáng thứ Hai)</label>
-          <label class="check full"><input type="checkbox" id="stPublic"> <span>Cho phép xem không cần đăng nhập (mặc định). <small>Khách chỉ xem, tìm kiếm, đọc và sao chép tin; cập nhật, dịch, tổng hợp và cài đặt vẫn cần đăng nhập. Bỏ chọn để chuyển về chế độ bắt buộc đăng nhập.</small> <em class="missing" id="stPublicWarn" hidden>⚠ Chưa đặt APP_PASSWORD trên server nên ai vào cũng có quyền quản trị.</em></span></label>
-          <label class="full">Mẫu tin A tham khảo <small>Dán vài mẫu tin A; Claude sẽ bắt chước cấu trúc và văn phong (không áp dụng cho chế độ miễn phí).</small><textarea id="stSamples" rows="8"></textarea></label>
-          <div class="full row"><button class="btn primary" type="submit">Lưu cài đặt</button><span class="saved" id="stSaved"></span></div>
+          <label><span data-i18n="st.n">Max articles per day</span><input type="number" min="1" max="60" id="stN"></label>
+          <label><span data-i18n="st.hour">Automatic update hour (Oslo time)</span><input type="number" min="0" max="23" id="stHour"></label>
+          <label><span data-i18n="st.min">Minimum relevance (0–100)</span> <small data-i18n="st.minHint"></small><input type="number" min="0" max="100" id="stMin"></label>
+          <label><span data-i18n="st.mail">Weekly brief recipient email</span><input type="email" id="stMail"></label>
+          <label class="check"><input type="checkbox" id="stWeekly"> <span data-i18n="st.weekly">Email the weekly brief (Monday morning)</span></label>
+          <label class="check full"><input type="checkbox" id="stPublic"> <span><span data-i18n="st.public"></span> <small data-i18n="st.publicHint"></small> <em class="missing" id="stPublicWarn" hidden data-i18n="st.publicWarn"></em></span></label>
+          <label class="full"><span data-i18n="st.samples">Sample briefs (Tin A)</span> <small data-i18n="st.samplesHint"></small><textarea id="stSamples" rows="8"></textarea></label>
+          <div class="full row"><button class="btn primary" type="submit" data-i18n="st.save">Save settings</button><span class="saved" id="stSaved"></span></div>
         </form>
 
-        <h3 class="sub">Bản tin tuần</h3>
+        <h3 class="sub" data-i18n="weekly.title">Weekly brief</h3>
         <div class="row wrap">
-          <label>Từ <input type="date" id="wFrom"></label><label>Đến <input type="date" id="wTo"></label>
-          <button class="btn" id="wDownload">Tải file Word</button>
-          <button class="btn" id="wSend">Gửi email ngay</button>
+          <label><span data-i18n="weekly.from">From</span> <input type="date" id="wFrom"></label><label><span data-i18n="weekly.to">To</span> <input type="date" id="wTo"></label>
+          <button class="btn" id="wDownload" data-i18n="weekly.download">Download Word file</button>
+          <button class="btn" id="wSend" data-i18n="weekly.send">Send email now</button>
           <span class="saved" id="wMsg"></span>
         </div>
 
-        <h3 class="sub">Nguồn tin</h3>
+        <h3 class="sub" data-i18n="sources.title">News sources</h3>
         <div class="table-wrap"><table class="sources" id="srcTable"></table></div>
         <form class="row wrap add-src" id="srcForm">
-          <input id="srcName" placeholder="Tên nguồn" required>
-          <input id="srcUrl" placeholder="URL RSS" required type="url">
-          <select id="srcLang"><option value="en">Tiếng Anh</option><option value="no">Tiếng Na Uy</option></select>
-          <label class="check"><input type="checkbox" id="srcPay"> Có thu phí (sẽ bỏ qua vì không đọc được toàn văn)</label>
-          <button class="btn" type="submit">Thêm nguồn</button>
+          <input id="srcName" data-i18n-ph="src.name" required>
+          <input id="srcUrl" data-i18n-ph="src.url" required type="url">
+          <select id="srcLang"><option value="en" data-i18n="lang.en">English</option><option value="no" data-i18n="lang.no">Norwegian</option></select>
+          <label class="check"><input type="checkbox" id="srcPay"> <span data-i18n="src.paywall"></span></label>
+          <button class="btn" type="submit" data-i18n="src.add">Add source</button>
         </form>
 
-        <h3 class="sub">Nhật ký cập nhật</h3>
+        <h3 class="sub" data-i18n="runs.title">Update log</h3>
         <ul class="history" id="runList"></ul>
       </div>
     </section>
   </main>
 
   <nav class="tabbar" id="tabbar">
-    <a data-view="day" class="active"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM4 9h16M8 3v4M16 3v4"/></svg>Hôm nay</a>
-    <a data-view="topic"><svg viewBox="0 0 24 24"><path d="M5 5h14M5 10h14M5 15h9M5 20h6"/></svg>Chủ đề</a>
-    <a data-view="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>Tìm kiếm</a>
-    <a data-view="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>Cài đặt</a>
+    <a data-view="day" class="active"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM4 9h16M8 3v4M16 3v4"/></svg><span data-i18n="tab.day">Today</span></a>
+    <a data-view="topic"><svg viewBox="0 0 24 24"><path d="M5 5h14M5 10h14M5 15h9M5 20h6"/></svg><span data-i18n="tab.topic">Topics</span></a>
+    <a data-view="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg><span data-i18n="tab.search">Search</span></a>
+    <a data-view="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg><span data-i18n="tab.settings">Settings</span></a>
   </nav>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="/i18n.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>

@@ -14,6 +14,7 @@
 - **Email bản tin tuần** (sáng thứ Hai) kèm file Word: tổng quan tuần, tổng hợp từng ngày, tin A, số liệu, bản dịch (bài đã dịch toàn văn), nguyên văn và link gốc.
 - **API chỉ-đọc** `/api/v1/*` để Claude hoặc công cụ khác truy vấn dữ liệu (xem `docs/CLAUDE_ACCESS.md`).
 - Giao diện riêng cho desktop (3 cột), máy tính bảng và di động (thanh tab dưới, khung đọc toàn màn hình); tự chuyển chế độ sáng/tối.
+- Giao diện hai ngôn ngữ **Anh – Việt** (mặc định tiếng Anh), nút chuyển ở thanh bên/đầu trang, trình duyệt nhớ lựa chọn. Nội dung bản tin (tin A, bản dịch, tổng hợp) vẫn bằng tiếng Việt. Chữ giao diện nằm trong `public/i18n.js`.
 
 ## Ba chế độ xử lý (Cài đặt → Chế độ xử lý tin)
 | Chế độ | Chấm điểm & tin A | Tổng hợp | Dịch toàn văn | Chi phí |
@@ -64,5 +65,5 @@ src/topics.js          Tổng hợp theo chủ đề
 src/weekly.js          File Word + email tuần
 src/scheduler.js       Lịch 8:00 / email thứ Hai, có cơ chế chạy bù
 src/routes/api.js      REST API (giao diện + /api/v1 chỉ-đọc)
-public/                Giao diện web
+public/                Giao diện web (i18n.js: chữ giao diện Anh/Việt)
 ```
