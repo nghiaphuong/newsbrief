@@ -29,13 +29,27 @@ async function processOne(article, settings) {
   await q("UPDATE articles SET status = 'processing' WHERE id = ?", [article.id]);
   try {
     const res = await ai.processArticle(article, settings.tin_a_samples || '');
-    await q(`UPDATE articles SET title_vi = ?, translation_vi = ?, tin_a_vi = ?, key_figures = ?, status = 'done', error_msg = NULL WHERE id = ?`,
-      [res.title_vi.slice(0, 590), res.translation_vi, res.tin_a_vi, JSON.stringify(res.key_figures), article.id]);
+    // Không đụng tới translation_vi: bản dịch toàn văn (nếu đã có) được giữ nguyên.
+    await q(`UPDATE articles SET title_vi = ?, tin_a_vi = ?, key_figures = ?, status = 'done', error_msg = NULL WHERE id = ?`,
+      [res.title_vi.slice(0, 590), res.tin_a_vi, JSON.stringify(res.key_figures), article.id]);
   } catch (e) {
     await q("UPDATE articles SET status = 'error', error_msg = ? WHERE id = ?", [String(e.message).slice(0, 490), article.id]);
     throw e;
   }
 }
+
+// Dịch toàn văn theo yêu cầu (nút "Dịch toàn văn" trong khung đọc bài). Chạy nền vì có thể mất vài phút,
+// trình duyệt hỏi trạng thái qua translateStatus().
+const translating = new Map(); // id -> { state: 'running' | 'error', error }
+function startTranslate(article) {
+  if (translating.get(article.id)?.state === 'running') return;
+  translating.set(article.id, { state: 'running' });
+  ai.translateArticle(article)
+    .then(translation => q('UPDATE articles SET translation_vi = ? WHERE id = ?', [translation, article.id]))
+    .then(() => translating.delete(article.id))
+    .catch(e => { console.error(`Dịch bài ${article.id}:`, e.message); translating.set(article.id, { state: 'error', error: e.message }); });
+}
+function translateStatus(id) { return translating.get(id) || { state: 'idle' }; }
 
 async function insertCandidate(c, briefDate, scoreInfo, log) {
   let content = c.summary || '';
@@ -97,7 +111,7 @@ async function runDaily(trigger = 'manual', opts = {}) {
       }
       stats.selected = inserted.length;
 
-      ctx.public.step = 'Dịch, viết tin A, trích số liệu';
+      ctx.public.step = 'Viết tin A, trích số liệu';
       ctx.public.total = inserted.length;
       await pool(inserted, 3, async (a) => {
         try { await processOne(a, settings); stats.processed++; ctx.log(`✓ ${a.title_original}`); }
@@ -138,4 +152,4 @@ async function buildDailyDigest(briefDate, log = console.log, length = 'short') 
   return content;
 }
 
-module.exports = { runDaily, buildDailyDigest, processOne, status };
+module.exports = { runDaily, buildDailyDigest, processOne, startTranslate, translateStatus, status };

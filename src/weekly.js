@@ -59,7 +59,7 @@ async function buildWeeklyDocx(from, to) {
       children.push(h('Số liệu đáng chú ý', HeadingLevel.HEADING_3));
       a.key_figures.forEach(f => children.push(...paras(`• ${f.figure} – ${f.context} (Nguồn: ${f.source}${f.type ? '; ' + f.type : ''})`, { size: 24 })));
     }
-    children.push(h('Bản dịch tiếng Việt', HeadingLevel.HEADING_3), ...paras(a.translation_vi, { size: 24 }));
+    if (a.translation_vi) children.push(h('Bản dịch tiếng Việt', HeadingLevel.HEADING_3), ...paras(a.translation_vi, { size: 24 }));
     children.push(h('Nguyên văn', HeadingLevel.HEADING_3), ...paras(a.content_original, { size: 22 }));
   });
 
@@ -88,7 +88,7 @@ async function sendWeekly(range) {
     from: config.smtp.from || config.smtp.user,
     to: to_,
     subject: `[NewsBrief] Bản tin tuần ${rep.label} (${rep.count} tin)`,
-    text: `Kính gửi,\n\nĐính kèm bản tin tuần ${rep.label} gồm ${rep.count} tin, bài (tổng quan, tổng hợp từng ngày, tin A, số liệu, bản dịch và nguyên văn kèm link bài gốc).\n\n${rep.overview.slice(0, 3000)}\n\n— NewsBrief${config.publicUrl ? ' · ' + config.publicUrl : ''}`,
+    text: `Kính gửi,\n\nĐính kèm bản tin tuần ${rep.label} gồm ${rep.count} tin, bài (tổng quan, tổng hợp từng ngày, tin A, số liệu, bản dịch (với các bài đã dịch toàn văn) và nguyên văn kèm link bài gốc).\n\n${rep.overview.slice(0, 3000)}\n\n— NewsBrief${config.publicUrl ? ' · ' + config.publicUrl : ''}`,
     attachments: [{ filename: rep.filename, content: rep.buffer }],
   });
   await q("INSERT INTO digests (kind, date_from, date_to, content_vi) VALUES ('weekly', ?, ?, ?)", [from, to, rep.overview || '']);

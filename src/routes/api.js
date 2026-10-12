@@ -101,6 +101,13 @@ r.post('/articles/:id/reprocess', wrap(async (req, res) => {
   await pipeline.processOne(a, await getSettings());
   res.json(fig((await q('SELECT * FROM articles WHERE id = ?', [a.id]))[0]));
 }));
+r.post('/articles/:id/translate', wrap(async (req, res) => {
+  const a = (await q('SELECT * FROM articles WHERE id = ?', [req.params.id]))[0];
+  if (!a) return res.status(404).json({ error: 'Không tìm thấy' });
+  pipeline.startTranslate(a);
+  res.json(pipeline.translateStatus(a.id));
+}));
+r.get('/articles/:id/translate', (req, res) => res.json(pipeline.translateStatus(Number(req.params.id))));
 r.delete('/articles/:id', wrap(async (req, res) => { await q('DELETE FROM articles WHERE id = ?', [req.params.id]); res.json({ ok: true }); }));
 
 r.get('/calendar', wrap(async (req, res) => {

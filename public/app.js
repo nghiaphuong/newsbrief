@@ -155,12 +155,14 @@ async function openArticle(id, readerSel) {
       <button data-tab="figs">Số liệu (${figs.length})</button>
     </div>
     <div data-panel="tina"><div class="tab-tools"><button class="btn small" data-copy="tina">Sao chép tin A</button></div><div class="prose tin-a">${md(a.tin_a_vi) || '<p>Chưa có.</p>'}</div></div>
-    <div data-panel="trans" hidden><div class="tab-tools"><button class="btn small" data-copy="trans">Sao chép bản dịch</button></div><div class="prose">${md(a.translation_vi) || '<p>Chưa có.</p>'}</div></div>
+    <div data-panel="trans" hidden>${a.translation_vi
+      ? `<div class="tab-tools"><button class="btn small" data-copy="trans">Sao chép bản dịch</button><button class="btn ghost small" data-translate>Dịch lại</button></div><div class="prose">${md(a.translation_vi)}</div>`
+      : `<p class="empty">Bài này chưa được dịch toàn văn (chỉ dịch khi cần để tiết kiệm chi phí).</p><div class="tab-tools"><button class="btn small" data-translate>Dịch toàn văn</button></div>`}</div>
     <div data-panel="orig" hidden><div class="tab-tools"><button class="btn small" data-copy="orig">Sao chép nguyên văn</button></div><div class="prose" lang="${a.lang === 'no' ? 'nb' : 'en'}">${md(a.content_original)}</div></div>
     <div data-panel="figs" hidden><div class="tab-tools"><button class="btn small" data-copy="figs">Sao chép số liệu</button></div>
       ${figs.length ? `<ul class="figs">${figs.map(f => `<li><span class="v">${esc(f.figure)}</span><span class="c">${esc(f.context)}</span><span class="s">Nguồn: ${esc(f.source)}${f.type ? ' · ' + esc(f.type) : ''}</span></li>`).join('')}</ul>` : '<p class="empty">Bài không có số liệu định lượng.</p>'}</div>
     <p class="reason">Mức liên quan ${a.relevance ?? '–'}/100${a.relevance_reason ? ' · ' + esc(a.relevance_reason) : ''}
-      · <button class="btn ghost small" data-reprocess>Dịch & tóm tắt lại</button></p>
+      · <button class="btn ghost small" data-reprocess>Tóm tắt lại</button></p>
   </article>`;
   const texts = {
     tina: a.tin_a_vi, trans: `${a.title_vi || ''}\n\n${a.translation_vi || ''}\n\nNguồn: ${a.source_name} – ${a.url}`, orig: `${a.title_original}\n\n${a.content_original || ''}\n\n${a.url}`,
@@ -177,6 +179,20 @@ async function openArticle(id, readerSel) {
     e.target.disabled = true; e.target.textContent = 'Đang xử lý… (1–2 phút)';
     try { await api(`/articles/${id}/reprocess`, { method: 'POST' }); toast('Đã xử lý lại'); openArticle(id, readerSel); }
     catch (err) { toast(err.message); e.target.disabled = false; }
+  };
+  pane.querySelector('[data-translate]').onclick = async e => {
+    const label = e.target.textContent;
+    e.target.disabled = true; e.target.textContent = 'Đang dịch… (1–3 phút)';
+    try {
+      let st = await api(`/articles/${id}/translate`, { method: 'POST' });
+      while (st.state === 'running') {
+        await new Promise(r => setTimeout(r, 5000));
+        st = await api(`/articles/${id}/translate`);
+      }
+      if (st.state === 'error') throw new Error('Lỗi dịch: ' + st.error);
+      toast('Đã dịch toàn văn');
+      if (state.selected === id) { await openArticle(id, readerSel); pane.querySelector('[data-tab="trans"]').click(); }
+    } catch (err) { toast(err.message); e.target.disabled = false; e.target.textContent = label; }
   };
   pane.scrollTop = 0;
 }

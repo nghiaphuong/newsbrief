@@ -70,14 +70,8 @@ Trả về DUY NHẤT một mảng JSON, mỗi phần tử: {"i": số thứ t�
   return parseJsonLoose(text);
 }
 
-// ---------- 2. Xử lý một bài: tiêu đề, dịch toàn văn, tin A, số liệu ----------
-async function processArticle(a, tinASamples) {
-  const samples = tinASamples && tinASamples.trim()
-    ? `MẪU TIN A THAM KHẢO (bắt chước cấu trúc, độ dài và văn phong, KHÔNG lấy nội dung):\n${tinASamples.trim()}`
-    : `KHUÔN TIN A MẶC ĐỊNH: 1 dòng tiêu đề ngắn gọn, in đậm bằng **…**; tiếp theo 1 đoạn 80–150 chữ mở đầu bằng thời gian (vd: "Ngày 10/10/2026,"), nêu chủ thể – sự kiện – nội dung chính – số liệu then chốt kèm nguồn; kết thúc bằng nguồn trong ngoặc, vd: "(Theo NRK, 10/10/2026)".`;
-  const system = `${CORE_RULES}
-${samples}`;
-  const user = `Bài báo nguồn
+function sourceBlock(a) {
+  return `Bài báo nguồn
 - Tiêu đề: ${a.title_original}
 - Báo: ${a.source_name}
 - Ngôn ngữ: ${a.lang === 'no' ? 'tiếng Na Uy' : 'tiếng Anh'}
@@ -86,24 +80,44 @@ ${samples}`;
 - ${a.full_text ? 'Toàn văn' : 'CHỈ CÓ PHẦN CÔNG KHAI/TRÍCH ĐOẠN'}:
 """
 ${(a.content_original || '').slice(0, 24000)}
-"""
+"""`;
+}
+
+// ---------- 2. Xử lý một bài (tự động): tiêu đề, tin A, số liệu — không dịch toàn văn để tiết kiệm chi phí ----------
+async function processArticle(a, tinASamples) {
+  const samples = tinASamples && tinASamples.trim()
+    ? `MẪU TIN A THAM KHẢO (bắt chước cấu trúc, độ dài và văn phong, KHÔNG lấy nội dung):\n${tinASamples.trim()}`
+    : `KHUÔN TIN A MẶC ĐỊNH: 1 dòng tiêu đề ngắn gọn, in đậm bằng **…**; tiếp theo 1 đoạn 80–150 chữ mở đầu bằng thời gian (vd: "Ngày 10/10/2026,"), nêu chủ thể – sự kiện – nội dung chính – số liệu then chốt kèm nguồn; kết thúc bằng nguồn trong ngoặc, vd: "(Theo NRK, 10/10/2026)".`;
+  const system = `${CORE_RULES}
+${samples}`;
+  const user = `${sourceBlock(a)}
 
 Hãy trả lời đúng theo định dạng sau, không thêm gì ngoài các thẻ:
 <title_vi>Tiêu đề dịch sang tiếng Việt</title_vi>
-<translation>Bản dịch ĐẦY ĐỦ, trung thành toàn bộ văn bản nguồn sang tiếng Việt, giữ cấu trúc đoạn. Không lược bỏ câu nào chứa số liệu.</translation>
 <tin_a>Tin A tóm tắt bằng tiếng Việt theo mẫu.</tin_a>
 <key_figures>Mảng JSON các số liệu/phân tích định lượng có trong bài: [{"figure":"giá trị kèm đơn vị","context":"nội dung bằng tiếng Việt","source":"nguồn của số liệu theo bài, hoặc tên báo nếu bài không nêu","type":"thực tế|dự báo|ước tính"}]. Trả [] nếu không có.</key_figures>`;
-  const text = await callClaude({ system, user, maxTokens: 24000, effort: 'medium' });
+  const text = await callClaude({ system, user, maxTokens: 10000, effort: 'medium' });
   let figures = [];
   try { figures = parseJsonLoose(tag(text, 'key_figures') || '[]'); } catch { figures = []; }
-  const translation = tag(text, 'translation');
-  if (!translation) throw new Error('Phản hồi AI thiếu bản dịch');
+  const tinA = tag(text, 'tin_a');
+  if (!tinA) throw new Error('Phản hồi AI thiếu tin A');
   return {
     title_vi: tag(text, 'title_vi'),
-    translation_vi: translation,
-    tin_a_vi: tag(text, 'tin_a'),
+    tin_a_vi: tinA,
     key_figures: Array.isArray(figures) ? figures : [],
   };
+}
+
+// ---------- 2b. Dịch toàn văn (chỉ chạy khi người dùng yêu cầu) ----------
+async function translateArticle(a) {
+  const user = `${sourceBlock(a)}
+
+Hãy trả lời đúng theo định dạng sau, không thêm gì ngoài thẻ:
+<translation>Bản dịch ĐẦY ĐỦ, trung thành toàn bộ văn bản nguồn sang tiếng Việt, giữ cấu trúc đoạn. Không lược bỏ câu nào chứa số liệu.</translation>`;
+  const text = await callClaude({ system: CORE_RULES, user, maxTokens: 24000, effort: 'medium' });
+  const translation = tag(text, 'translation');
+  if (!translation) throw new Error('Phản hồi AI thiếu bản dịch');
+  return translation;
 }
 
 const LENGTHS = {
@@ -142,4 +156,4 @@ Viết phần "Tổng quan tuần ${label}" (khoảng 1 trang A4) bằng tiếng
   return callClaude({ system, user: articlesBlock(articles), maxTokens: 12000 });
 }
 
-module.exports = { callClaude, scoreCandidates, processArticle, dailyDigest, topicDigest, weeklyOverview, LENGTHS };
+module.exports = { callClaude, scoreCandidates, processArticle, translateArticle, dailyDigest, topicDigest, weeklyOverview, LENGTHS };

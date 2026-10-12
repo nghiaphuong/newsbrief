@@ -6,11 +6,12 @@
 - **Bản tin hằng ngày** lúc 8:00 (giờ Oslo), tối đa 20 tin/ngày (chỉnh được), nút **Cập nhật ngay**.
 - Nguồn: RSS của báo chí và cơ quan nhà nước Na Uy, báo quốc tế, báo về ASEAN/Việt Nam, kết hợp quét toàn cầu qua GDELT. Bật/tắt/thêm nguồn trong **Cài đặt**.
 - AI (Claude) chấm điểm mức liên quan theo thứ tự ưu tiên: Na Uy–Việt Nam → Na Uy–ASEAN → chính trị/đối ngoại → kinh tế (chính sách, đầu tư, thương mại, doanh nghiệp) → văn hóa–xã hội.
-- Mỗi bài: nguyên văn, **bản dịch đầy đủ**, **tin A**, **bảng số liệu kèm nguồn**, link bài gốc; nút sao chép từng phần.
+- Mỗi bài: nguyên văn, **tin A**, **bảng số liệu kèm nguồn**, link bài gốc; nút sao chép từng phần.
+- **Bản dịch đầy đủ theo yêu cầu**: bấm "Dịch toàn văn" trong tab Bản dịch (không dịch tự động để tiết kiệm chi phí Claude API).
 - **Tổng hợp tin trong ngày** (nửa trang / 1 trang / 2 trang).
 - **Tổng hợp theo chủ đề**: tự nhập chủ đề, chọn độ dài và số ngày; tùy chọn quét thêm nguồn mới.
 - **Lưu trữ vĩnh viễn**, tìm theo ngày / tuần / tháng / khoảng tùy chọn / từ khóa (Anh, Na Uy, Việt).
-- **Email bản tin tuần** (sáng thứ Hai) kèm file Word: tổng quan tuần, tổng hợp từng ngày, tin A, số liệu, bản dịch, nguyên văn và link gốc.
+- **Email bản tin tuần** (sáng thứ Hai) kèm file Word: tổng quan tuần, tổng hợp từng ngày, tin A, số liệu, bản dịch (bài đã dịch toàn văn), nguyên văn và link gốc.
 - **API chỉ-đọc** `/api/v1/*` để Claude hoặc công cụ khác truy vấn dữ liệu (xem `docs/CLAUDE_ACCESS.md`).
 - Giao diện riêng cho desktop (3 cột), máy tính bảng và di động (thanh tab dưới, khung đọc toàn màn hình); tự chuyển chế độ sáng/tối.
 
