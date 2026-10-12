@@ -19,7 +19,7 @@
 | Chế độ | Chấm điểm & tin A | Tổng hợp | Dịch toàn văn | Chi phí |
 |---|---|---|---|---|
 | 1. Claude API | Claude, ngay trên server | Claude viết | Claude, ngay khi bấm | Ước tính 15–25 USD/tháng với 20 tin/ngày (`ANTHROPIC_API_KEY`) |
-| 2. Gói Claude Team/Pro (**mặc định**) | Claude Code chạy theo lịch bằng tài khoản của bạn | Claude viết (bản tổng hợp ngày); chủ đề & tuần là danh sách ghép | Claude, ở lượt chạy tiếp theo | 0 USD thêm nếu đã có gói; tính vào hạn mức gói (token tự tạo, lấy lệnh cài trong Cài đặt; xem `docs/CLAUDE_PLAN.md`) |
+| 2. Gói Claude Team/Pro (**mặc định**) | Claude Code chạy theo lịch bằng tài khoản của bạn | Claude viết (bản tổng hợp ngày); chủ đề & tuần là danh sách ghép | Claude, ở lượt chạy tiếp theo | 0 USD thêm nếu đã có gói; tính vào hạn mức gói (`AGENT_API_TOKEN`, xem `docs/CLAUDE_PLAN.md`) |
 | 3. Miễn phí | Lọc từ khóa; dịch máy tiêu đề + đoạn mở đầu; không trích số liệu | Danh sách ghép từ tin A | Google Translate, ngay khi bấm | 0 USD: app tự dừng ở 500.000 ký tự/tháng tính phí của Google (`GOOGLE_TRANSLATE_API_KEY`) |
 
 ## Nguyên tắc nội dung
@@ -32,7 +32,7 @@
 1. hPanel → Databases → tạo database MySQL + user.
 2. Websites → Add website → Node.js Web App → Import Git Repository → chọn `newsbrief`, nhánh `main`.
    - Framework: Express · Entry file: `server.js` · Node 20/22 · Build: để trống hoặc `npm run build`.
-3. Đặt biến môi trường theo `.env.example` (DB_*, APP_PASSWORD, SESSION_SECRET, SMTP_*, CRON_KEY, READONLY_API_TOKEN, và khóa của chế độ xử lý bạn dùng: ANTHROPIC_API_KEY / GOOGLE_TRANSLATE_API_KEY; AGENT_API_TOKEN là tùy chọn vì server tự tạo).
+3. Đặt biến môi trường theo `.env.example` (DB_*, APP_PASSWORD, SESSION_SECRET, SMTP_*, CRON_KEY, READONLY_API_TOKEN, và khóa của chế độ xử lý bạn dùng: ANTHROPIC_API_KEY / AGENT_API_TOKEN / GOOGLE_TRANSLATE_API_KEY).
 4. Deploy. Bảng dữ liệu tự tạo khi khởi động.
 5. (Khuyến nghị) hPanel → Advanced → Cron Jobs, mỗi 10 phút:
    `curl -s "https://<tên-miền>/api/cron/tick?key=<CRON_KEY>" >/dev/null`

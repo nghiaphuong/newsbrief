@@ -186,10 +186,7 @@ label.check { flex-direction: row; align-items: center; gap: 8px; color: var(--i
 .mode-pick label.mode > span { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .mode-pick label.mode small { color: var(--muted); }
 .mode-pick label.mode .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-.mode-pick em { font-style: normal; font-size: 12px; }
-.agent-box { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
-.agent-box pre { margin: 0; padding: 8px 10px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-sm); font-size: 12px; white-space: pre-wrap; word-break: break-all; max-width: 100%; user-select: all; }
-.mode-pick em.ok { color: var(--muted); }
+.mode-pick em { font-style: normal; font-size: 12px; }.mode-pick em.ok { color: var(--muted); }
 .mode-pick em.missing { color: var(--lacquer); }
 .table-wrap { overflow-x: auto; }
 .sources { width: 100%; border-collapse: collapse; font-size: 13.5px; }

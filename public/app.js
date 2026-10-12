@@ -327,27 +327,9 @@ function showEnvHints() {
   const env = state.env || {};
   const hint = (el, ok, okText, missText) => { el.className = ok ? 'ok' : 'missing'; el.textContent = ok ? okText : missText; };
   hint($('#stMode [data-env="anthropic"]'), env.anthropic, '✓ Đã có ANTHROPIC_API_KEY', '⚠ Chưa đặt ANTHROPIC_API_KEY trên server');
-  hint($('#stMode [data-env="agent"]'), env.agent, '✓ Đã có token cho máy chạy Claude', '⚠ Chưa có token (cơ sở dữ liệu chưa sẵn sàng)');
+  hint($('#stMode [data-env="agent"]'), env.agent, '✓ Đã có AGENT_API_TOKEN', '⚠ Chưa đặt AGENT_API_TOKEN trên server');
   hint($('#stMode [data-env="translate"]'), env.google, '✓ Đã có GOOGLE_TRANSLATE_API_KEY', '⚠ Chưa đặt GOOGLE_TRANSLATE_API_KEY trên server');
 }
-
-// Lệnh setx chứa đúng token hiện hành của server, để máy chạy Claude luôn khớp token.
-function showAgentSetup(s) {
-  $('#agentCmd').textContent = s.commands.join('\n');
-  $('#agentBox').hidden = false;
-  $('#agentRotate').hidden = s.source !== 'db';
-  $('#agentShow').textContent = s.source === 'env' ? 'Lệnh cài (token lấy từ biến AGENT_API_TOKEN trên Hostinger)' : 'Lệnh cài cho máy chạy Claude';
-}
-$('#agentShow').onclick = async e => {
-  e.preventDefault();
-  try { showAgentSetup(await api('/agent-token')); } catch (err) { toast(err.message); }
-};
-$('#agentCopy').onclick = e => { e.preventDefault(); copy($('#agentCmd').textContent, 'lệnh cài'); };
-$('#agentRotate').onclick = async e => {
-  e.preventDefault();
-  if (!confirm('Tạo token mới? Token cũ sẽ hết hiệu lực; cần chạy lại lệnh setx trên máy chạy Claude.')) return;
-  try { showAgentSetup(await api('/agent-token/rotate', { method: 'POST' })); toast('Đã tạo token mới – hãy chạy lại lệnh cài'); } catch (err) { toast(err.message); }
-};
 
 $('#settingsForm').addEventListener('submit', async e => {
   e.preventDefault();
