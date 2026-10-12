@@ -6,7 +6,7 @@
 //  - free:        không dùng AI: lọc từ khóa, dịch máy Google (tự chặn ở 500.000 ký tự/tháng), tổng hợp dạng danh sách.
 // Chỉ nhận bài đọc được toàn văn: bỏ nguồn thu phí và bài chỉ lấy được trích đoạn.
 const config = require('./config');
-const { q, getSettings } = require('./db');
+const { q, getSettings, withLock, lockIsFree } = require('./db');
 const ai = require('./ai');
 const heuristic = require('./heuristic');
 const translator = require('./translator');
@@ -126,8 +126,25 @@ function selection(mode, settings, need) {
   return { minRel: parseInt(settings.min_relevance || '45', 10), quota: need };
 }
 
+// Khóa MySQL bảo đảm chỉ MỘT tiến trình chạy bản tin ngày tại một thời điểm (kể cả khi Hostinger chạy nhiều tiến trình).
+const DAILY_LOCK = 'newsbrief_daily';
 async function runDaily(trigger = 'manual', opts = {}) {
   if (current) throw new Error('Đang có một lượt cập nhật chạy, vui lòng chờ.');
+  const out = await withLock(DAILY_LOCK, () => runDailyNow(trigger, opts));
+  if (out.locked) throw new Error('Đang có một lượt cập nhật chạy, vui lòng chờ.');
+  return out.result;
+}
+
+// Lượt chạy bị bỏ dở (tiến trình bị Hostinger tắt giữa chừng): không còn ai giữ khóa nhưng vẫn ghi 'running'.
+// Đánh dấu lỗi để lịch tự động chạy lại, và trả các bài đang dở về hàng chờ.
+async function recoverInterrupted() {
+  if (current || !(await lockIsFree(DAILY_LOCK))) return 0;
+  const r = await q("UPDATE runs SET status = 'error', finished_at = NOW(), log = CONCAT(IFNULL(log, ''), '\\n[Bị gián đoạn: tiến trình đã dừng trước khi chạy xong]') WHERE kind = 'daily' AND status = 'running'");
+  await q("UPDATE articles SET status = 'pending' WHERE status = 'processing'");
+  return r.affectedRows || 0;
+}
+
+async function runDailyNow(trigger, opts) {
   const ctx = await startRun('daily', trigger);
   current = ctx;
   const stats = { candidates: 0, selected: 0, processed: 0, errors: 0, queued: 0 };
@@ -217,4 +234,4 @@ async function buildDailyDigest(briefDate, log = console.log, length = 'short', 
   return content;
 }
 
-module.exports = { runDaily, buildDailyDigest, processOne, startTranslate, translateStatus, status, modeOf, FULL_TEXT_MIN };
+module.exports = { runDaily, recoverInterrupted, buildDailyDigest, processOne, startTranslate, translateStatus, status, modeOf, FULL_TEXT_MIN };

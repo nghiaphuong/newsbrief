@@ -77,4 +77,20 @@ async function setSetting(k, v) {
   await q('INSERT INTO settings (k, v) VALUES (?, ?) ON DUPLICATE KEY UPDATE v = VALUES(v)', [k, String(v)]);
 }
 
-module.exports = { pool, q, migrate, getSettings, setSetting };
+// Khóa dùng chung giữa các tiến trình (Hostinger có thể chạy nhiều tiến trình Node cùng lúc).
+// GET_LOCK gắn với một kết nối riêng; tiến trình chết thì kết nối đóng và khóa tự nhả.
+async function withLock(name, fn) {
+  const conn = await pool.getConnection();
+  try {
+    const [[r]] = await conn.query('SELECT GET_LOCK(?, 0) AS l', [name]);
+    if (r.l !== 1) return { locked: true };
+    try { return { result: await fn() }; }
+    finally { await conn.query('SELECT RELEASE_LOCK(?)', [name]).catch(() => {}); }
+  } finally { conn.release(); }
+}
+async function lockIsFree(name) {
+  const [r] = await q('SELECT IS_FREE_LOCK(?) AS f', [name]);
+  return r.f === 1;
+}
+
+module.exports = { pool, q, migrate, getSettings, setSetting, withLock, lockIsFree };

@@ -35,9 +35,11 @@
    - Framework: Express · Entry file: `server.js` · Node 20/22 · Build: để trống hoặc `npm run build`.
 3. Đặt biến môi trường theo `.env.example` (DB_*, APP_PASSWORD, SESSION_SECRET, SMTP_*, CRON_KEY, READONLY_API_TOKEN, và khóa của chế độ xử lý bạn dùng: ANTHROPIC_API_KEY / AGENT_API_TOKEN / GOOGLE_TRANSLATE_API_KEY).
 4. Deploy. Bảng dữ liệu tự tạo khi khởi động.
-5. (Khuyến nghị) hPanel → Advanced → Cron Jobs, mỗi 10 phút:
-   `curl -s "https://<tên-miền>/api/cron/tick?key=<CRON_KEY>" >/dev/null`
-   để bảo đảm lịch 8:00 và email tuần vẫn chạy khi tiến trình Node tạm ngủ.
+5. **(Bắt buộc)** hPanel → Advanced → Cron Jobs, mỗi 5 phút (`*/5 * * * *`):
+   `curl -s https://<tên-miền>/api/cron/tick`
+   Trên Hostinger, tiến trình Node chỉ chạy khi có truy cập và tự dừng khi rảnh, nên nếu thiếu Cron Job thì bản tin 8:00
+   và email tuần sẽ không chạy. Gọi tick nhiều lần không tốn thêm chi phí: mỗi việc chỉ chạy một lần/ngày (email: một lần/tuần),
+   có khóa MySQL chống chạy trùng giữa nhiều tiến trình, và lượt chạy bị gián đoạn sẽ tự chạy lại (tối đa 3 lần lỗi/ngày).
 
 ## Chạy thử trên máy
 ```bash

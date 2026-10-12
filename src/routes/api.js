@@ -43,10 +43,12 @@ r.get('/me', wrap(async (req, res) => {
 }));
 
 // ---------- Cron dự phòng (Hostinger Cron Jobs gọi URL này) ----------
+// Không cần khóa: tick chỉ chạy việc đã đến hạn, mỗi việc tối đa một lần/ngày (bản tin) hoặc /tuần (email),
+// nên gọi thêm cũng không phát sinh chi phí. Nếu có gửi ?key= thì phải đúng CRON_KEY (tương thích cấu hình cũ).
 r.get('/cron/tick', wrap(async (req, res) => {
-  if (!config.cronKey || !auth.safeEq(req.query.key || '', config.cronKey)) return res.status(401).json({ error: 'Sai khóa' });
-  scheduler.tick('cron');
-  res.json({ ok: true, at: new Date().toISOString() });
+  if (req.query.key && config.cronKey && !auth.safeEq(req.query.key, config.cronKey)) return res.status(401).json({ error: 'Sai khóa' });
+  const started = await scheduler.tick('cron');
+  res.json({ ok: true, at: new Date().toISOString(), started });
 }));
 
 // ---------- API chỉ-đọc cho Claude / công cụ ngoài ----------
