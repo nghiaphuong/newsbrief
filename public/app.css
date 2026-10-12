@@ -59,7 +59,9 @@ label.check { flex-direction: row; align-items: center; gap: 8px; color: var(--i
 .app { display: grid; grid-template-columns: 248px 1fr; height: 100vh; height: 100dvh; }
 .rail { background: var(--fjord); color: #DCE7EF; display: flex; flex-direction: column; padding: 20px 14px; gap: 18px; overflow-y: auto; }
 @media (prefers-color-scheme: dark) { .rail { background: #0B141A; } }
-.brand { display: flex; gap: 10px; align-items: center; padding: 0 6px; }
+.brand { display: flex; gap: 10px; align-items: center; padding: 0 6px; color: inherit; text-decoration: none; border-radius: var(--r-sm); }
+.brand:hover strong { text-decoration: underline; }
+.brand:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
 .brand strong { display: block; color: #fff; font-size: 17px; }
 .brand span { font-size: 11.5px; opacity: .75; }
 .brand-mark { width: 36px; height: 36px; border-radius: 9px; background: #F5F7F8; color: #14324A; display: grid; place-items: center; font: 700 20px var(--read); flex: none; }
@@ -96,6 +98,7 @@ label.check { flex-direction: row; align-items: center; gap: 8px; color: var(--i
 .day-num { font: 600 52px/0.9 var(--read); color: var(--fjord); letter-spacing: -0.02em; font-variant-numeric: lining-nums; }
 .day-week { font-weight: 600; font-size: 15px; }
 .day-count { color: var(--muted); font-size: 13px; }
+.auto-note { color: var(--muted); font-size: 12.5px; margin: 8px 0 0; }
 .day-actions { display: flex; gap: 8px; margin-top: 14px; }
 .day-actions input { flex: 1; }
 .progress { margin-top: 12px; font-size: 12.5px; color: var(--muted); }
@@ -184,6 +187,8 @@ label.check { flex-direction: row; align-items: center; gap: 8px; color: var(--i
 .mode-pick label.mode small { color: var(--muted); }
 .mode-pick label.mode .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .mode-pick em { font-style: normal; font-size: 12px; }
+.agent-box { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.agent-box pre { margin: 0; padding: 8px 10px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-sm); font-size: 12px; white-space: pre-wrap; word-break: break-all; max-width: 100%; user-select: all; }
 .mode-pick em.ok { color: var(--muted); }
 .mode-pick em.missing { color: var(--lacquer); }
 .table-wrap { overflow-x: auto; }

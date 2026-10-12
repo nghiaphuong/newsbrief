@@ -1,6 +1,6 @@
 const express = require('express');
 const config = require('../config');
-const { q, getSettings, setSetting } = require('../db');
+const { q, getSettings, setSetting, getAgentToken, rotateAgentToken } = require('../db');
 const auth = require('../auth');
 const pipeline = require('../pipeline');
 const agent = require('../agent');
@@ -26,7 +26,12 @@ r.post('/login', (req, res) => {
   res.status(401).json({ error: 'Sai mật khẩu' });
 });
 r.post('/logout', (req, res) => { res.clearCookie(auth.COOKIE); res.json({ ok: true }); });
-r.get('/me', (req, res) => res.json({ loggedIn: !config.appPassword || auth.verify(req.cookies[auth.COOKIE]), today: ymd() }));
+r.get('/me', wrap(async (req, res) => {
+  const loggedIn = !config.appPassword || auth.verify(req.cookies[auth.COOKIE]);
+  // Không để lỗi CSDL làm hỏng trang đăng nhập/khởi động: mặc định 8 giờ.
+  const dailyHour = loggedIn ? await getSettings().then(s => parseInt(s.daily_hour || '8', 10)).catch(() => 8) : 8;
+  res.json({ loggedIn, today: ymd(), dailyHour });
+}));
 
 // ---------- Cron dự phòng (Hostinger Cron Jobs gọi URL này) ----------
 r.get('/cron/tick', wrap(async (req, res) => {
@@ -178,7 +183,7 @@ const ALLOWED = { ai_mode: ['api', 'claude_plan', 'free'] };
 // Kèm cho giao diện biết khóa nào đã đặt trong biến môi trường (không trả giá trị khóa) và hạn mức Google đã dùng.
 const withEnv = async s => ({
   ...s,
-  env: { anthropic: !!config.anthropic.key, google: !!config.googleTranslateKey, agent: !!config.agentToken },
+  env: { anthropic: !!config.anthropic.key, google: !!config.googleTranslateKey, agent: !!(await getAgentToken().catch(() => null)) },
   translate_usage: await translator.usage().catch(() => null),
 });
 r.get('/settings', wrap(async (req, res) => res.json(await withEnv(await getSettings()))));
@@ -190,6 +195,23 @@ r.put('/settings', wrap(async (req, res) => {
   }
   res.json(await withEnv(await getSettings()));
 }));
+// Token + lệnh cài cho máy chạy Claude Code (chế độ gói Claude). Lệnh setx lưu vào biến môi trường của
+// Windows nên không cần file .newsbrief-agent.env; tools/claude-agent.js tự đọc được cả khi app đã mở sẵn.
+const agentSetup = (req, t) => {
+  const url = config.publicUrl || `${req.protocol}://${req.get('host')}`;
+  return { source: t.source, token: t.token, url, commands: [`setx NEWSBRIEF_URL "${url}"`, `setx NEWSBRIEF_AGENT_TOKEN "${t.token}"`] };
+};
+r.get('/agent-token', wrap(async (req, res) => {
+  const t = await getAgentToken();
+  if (!t) return res.status(503).json({ error: 'Chưa có token (CSDL chưa sẵn sàng)' });
+  res.json(agentSetup(req, t));
+}));
+r.post('/agent-token/rotate', wrap(async (req, res) => {
+  if (config.agentToken) return res.status(400).json({ error: 'Token đang lấy từ biến môi trường AGENT_API_TOKEN trên Hostinger; đổi giá trị ở đó.' });
+  await rotateAgentToken();
+  res.json(agentSetup(req, await getAgentToken()));
+}));
+
 r.get('/sources', wrap(async (req, res) => res.json(await q('SELECT * FROM sources ORDER BY region, name'))));
 r.post('/sources', wrap(async (req, res) => {
   const { name, url, lang, region, paywall, filter_keywords } = req.body;

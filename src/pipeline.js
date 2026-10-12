@@ -5,7 +5,6 @@
 //                 gói Claude Team/Pro lấy việc qua /api/agent/* và gửi kết quả về (src/agent.js).
 //  - free:        không dùng AI: lọc từ khóa, dịch máy Google (tự chặn ở 500.000 ký tự/tháng), tổng hợp dạng danh sách.
 // Chỉ nhận bài đọc được toàn văn: bỏ nguồn thu phí và bài chỉ lấy được trích đoạn.
-const config = require('./config');
 const { q, getSettings } = require('./db');
 const ai = require('./ai');
 const heuristic = require('./heuristic');
@@ -163,9 +162,7 @@ async function runDaily(trigger = 'manual', opts = {}) {
       stats.selected = inserted.length;
 
       if (mode === 'claude_plan') {
-        stats.queued = inserted.length;
-        if (!config.agentToken) ctx.log('CẢNH BÁO: chưa đặt AGENT_API_TOKEN trên server nên tác vụ Claude Code chưa lấy được việc (xem docs/CLAUDE_PLAN.md).');
-        ctx.log(`Đã đưa ${inserted.length} tin vào hàng đợi; Claude (gói Team/Pro) sẽ chấm điểm, viết tin A và tổng hợp ở lượt chạy tiếp theo.`);
+        stats.queued = inserted.length;        ctx.log(`Đã đưa ${inserted.length} tin vào hàng đợi; Claude (gói Team/Pro) sẽ chấm điểm, viết tin A và tổng hợp ở lượt chạy tiếp theo.`);
       } else {
         ctx.public.step = mode === 'free' ? 'Dịch máy tiêu đề và đoạn mở đầu' : 'Viết tin A, trích số liệu';
         ctx.public.total = inserted.length;

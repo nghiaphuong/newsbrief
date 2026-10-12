@@ -26,7 +26,7 @@
 
 <div id="app" class="app" hidden>
   <aside class="rail">
-    <div class="brand"><div class="brand-mark">N</div><div><strong>NewsBrief</strong><span>Đại sứ quán Việt Nam tại Na Uy</span></div></div>
+    <a class="brand" href="#day" id="homeLink" title="Về trang chủ (Bản tin ngày)"><div class="brand-mark">N</div><div><strong>NewsBrief</strong><span>Đại sứ quán Việt Nam tại Na Uy</span></div></a>
     <nav class="nav" id="nav">
       <a data-view="day" class="active"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM4 9h16M8 3v4M16 3v4"/></svg><span>Bản tin ngày</span></a>
       <a data-view="topic"><svg viewBox="0 0 24 24"><path d="M5 5h14M5 10h14M5 15h9M5 20h6"/></svg><span>Tổng hợp chủ đề</span></a>
@@ -46,6 +46,7 @@
             <div class="day-num" id="dayNum"></div>
             <div><div class="day-week" id="dayWeek"></div><div class="day-count" id="dayCount"></div></div>
           </div>
+          <p class="auto-note" id="autoNote">Tự động cập nhật vào 8:00 sáng giờ Na Uy</p>
           <div class="day-actions">
             <input type="date" id="datePick" aria-label="Chọn ngày">
             <button class="btn primary" id="runBtn">Cập nhật ngay</button>
@@ -124,7 +125,9 @@
             <label class="mode"><input type="radio" name="ai_mode" value="api">
               <span><strong>1. Claude API (dùng API credits)</strong><small>Xử lý ngay trên server. Ước tính khoảng 15–25 USD/tháng với 20 tin/ngày (Sonnet 5.5), tính theo lượng dùng tại console.anthropic.com.</small><em data-env="anthropic"></em></span></label>
             <label class="mode"><input type="radio" name="ai_mode" value="claude_plan">
-              <span><strong>2. Gói Claude Team/Pro (mặc định – không phát sinh thêm chi phí nếu đã có gói)</strong><small>Server chỉ thu thập và lọc tin; tác vụ Claude Code chạy theo lịch bằng tài khoản Claude của bạn sẽ chấm điểm, viết tin A, tổng hợp và dịch theo yêu cầu. Không tốn API credits, tính vào hạn mức của gói. Cách cài: xem docs/CLAUDE_PLAN.md.</small><em data-env="agent"></em></span></label>
+              <span><strong>2. Gói Claude Team/Pro (mặc định – không phát sinh thêm chi phí nếu đã có gói)</strong><small>Server chỉ thu thập và lọc tin; tác vụ Claude Code chạy theo lịch bằng tài khoản Claude của bạn sẽ chấm điểm, viết tin A, tổng hợp và dịch theo yêu cầu. Không tốn API credits, tính vào hạn mức của gói. Cách cài: xem docs/CLAUDE_PLAN.md.</small><em data-env="agent"></em>
+                <span class="row"><button type="button" class="btn small" id="agentShow">Lệnh cài cho máy chạy Claude</button><button type="button" class="btn ghost small" id="agentRotate" hidden>Tạo token mới</button></span>
+                <span class="agent-box" id="agentBox" hidden><small>Chạy 2 lệnh sau một lần trong PowerShell trên máy chạy Claude Code (lưu vào biến môi trường của Windows, không cần file .newsbrief-agent.env):</small><pre id="agentCmd"></pre><button type="button" class="btn small" id="agentCopy">Sao chép lệnh</button></span></span></label>
             <label class="mode"><input type="radio" name="ai_mode" value="free">
               <span><strong>3. Miễn phí, không dùng AI (Google Translate)</strong><small>Lọc tin bằng từ khóa; tiêu đề và đoạn mở đầu được dịch máy làm tin A; không trích số liệu; bản tổng hợp là danh sách ghép. App tự dừng dịch khi chạm 500.000 ký tự trong tháng tính phí của Google (giờ Thái Bình Dương) để không phát sinh phí.</small>
                 <em data-env="translate"></em><small id="stUsage"></small></span></label>

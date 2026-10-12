@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const mysql = require('mysql2/promise');
@@ -49,6 +50,9 @@ async function migrate() {
   for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) {
     await q('INSERT IGNORE INTO settings (k, v) VALUES (?, ?)', [k, v]);
   }
+  // Token cho tác vụ Claude Code: tự tạo một lần nếu chưa có, để chế độ gói Claude luôn dùng được
+  // kể cả khi chưa đặt biến môi trường AGENT_API_TOKEN (biến này, nếu có, được ưu tiên).
+  await q("INSERT IGNORE INTO settings (k, v) VALUES ('agent_token', ?)", [newToken()]);
   for (const s of DEFAULT_SOURCES) {
     await q(
       'INSERT IGNORE INTO sources (name, url, lang, region, paywall, filter_keywords) VALUES (?,?,?,?,?,?)',
@@ -57,15 +61,32 @@ async function migrate() {
   }
 }
 
+const SECRET_KEYS = ['agent_token']; // không trả qua getSettings()
+
 async function getSettings() {
   const rows = await q('SELECT k, v FROM settings');
   const out = { ...DEFAULT_SETTINGS };
-  rows.forEach(r => { out[r.k] = r.v; });
+  rows.forEach(r => { if (!SECRET_KEYS.includes(r.k)) out[r.k] = r.v; });
   return out;
+}
+
+const newToken = () => crypto.randomBytes(32).toString('hex');
+
+// Token hiệu lực: biến môi trường AGENT_API_TOKEN nếu có, nếu không thì token tự tạo lưu trong CSDL.
+async function getAgentToken() {
+  if (config.agentToken) return { token: config.agentToken, source: 'env' };
+  const [r] = await q("SELECT v FROM settings WHERE k = 'agent_token'");
+  return r ? { token: r.v, source: 'db' } : null;
+}
+
+async function rotateAgentToken() {
+  const token = newToken();
+  await q("INSERT INTO settings (k, v) VALUES ('agent_token', ?) ON DUPLICATE KEY UPDATE v = VALUES(v)", [token]);
+  return token;
 }
 
 async function setSetting(k, v) {
   await q('INSERT INTO settings (k, v) VALUES (?, ?) ON DUPLICATE KEY UPDATE v = VALUES(v)', [k, String(v)]);
 }
 
-module.exports = { pool, q, migrate, getSettings, setSetting };
+module.exports = { pool, q, migrate, getSettings, setSetting, getAgentToken, rotateAgentToken };

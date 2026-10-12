@@ -63,6 +63,8 @@ function go(view) {
   window.scrollTo(0, 0);
 }
 $$('[data-view]').forEach(a => a.addEventListener('click', () => go(a.dataset.view)));
+// Chữ NewsBrief góc trên bên trái: về trang chủ (Bản tin ngày)
+$('#homeLink').addEventListener('click', e => { e.preventDefault(); go('day'); });
 
 // ---------- Lịch ----------
 async function renderCal() {
@@ -325,15 +327,34 @@ function showEnvHints() {
   const env = state.env || {};
   const hint = (el, ok, okText, missText) => { el.className = ok ? 'ok' : 'missing'; el.textContent = ok ? okText : missText; };
   hint($('#stMode [data-env="anthropic"]'), env.anthropic, '✓ Đã có ANTHROPIC_API_KEY', '⚠ Chưa đặt ANTHROPIC_API_KEY trên server');
-  hint($('#stMode [data-env="agent"]'), env.agent, '✓ Đã có AGENT_API_TOKEN', '⚠ Chưa đặt AGENT_API_TOKEN trên server');
+  hint($('#stMode [data-env="agent"]'), env.agent, '✓ Đã có token cho máy chạy Claude', '⚠ Chưa có token (cơ sở dữ liệu chưa sẵn sàng)');
   hint($('#stMode [data-env="translate"]'), env.google, '✓ Đã có GOOGLE_TRANSLATE_API_KEY', '⚠ Chưa đặt GOOGLE_TRANSLATE_API_KEY trên server');
 }
+
+// Lệnh setx chứa đúng token hiện hành của server, để máy chạy Claude luôn khớp token.
+function showAgentSetup(s) {
+  $('#agentCmd').textContent = s.commands.join('\n');
+  $('#agentBox').hidden = false;
+  $('#agentRotate').hidden = s.source !== 'db';
+  $('#agentShow').textContent = s.source === 'env' ? 'Lệnh cài (token lấy từ biến AGENT_API_TOKEN trên Hostinger)' : 'Lệnh cài cho máy chạy Claude';
+}
+$('#agentShow').onclick = async e => {
+  e.preventDefault();
+  try { showAgentSetup(await api('/agent-token')); } catch (err) { toast(err.message); }
+};
+$('#agentCopy').onclick = e => { e.preventDefault(); copy($('#agentCmd').textContent, 'lệnh cài'); };
+$('#agentRotate').onclick = async e => {
+  e.preventDefault();
+  if (!confirm('Tạo token mới? Token cũ sẽ hết hiệu lực; cần chạy lại lệnh setx trên máy chạy Claude.')) return;
+  try { showAgentSetup(await api('/agent-token/rotate', { method: 'POST' })); toast('Đã tạo token mới – hãy chạy lại lệnh cài'); } catch (err) { toast(err.message); }
+};
 
 $('#settingsForm').addEventListener('submit', async e => {
   e.preventDefault();
   const mode = $('#stMode input[name="ai_mode"]:checked')?.value || 'claude_plan';
   await api('/settings', { method: 'PUT', body: { ai_mode: mode, articles_per_day: $('#stN').value, daily_hour: $('#stHour').value, min_relevance: $('#stMin').value, weekly_to: $('#stMail').value, weekly_enabled: $('#stWeekly').checked ? '1' : '0', tin_a_samples: $('#stSamples').value } });
   state.mode = mode;
+  showAutoNote($('#stHour').value);
   $('#stSaved').textContent = 'Đã lưu.'; setTimeout(() => $('#stSaved').textContent = '', 2500);
 });
 $('#wDownload').onclick = () => { location.href = `/api/weekly/docx?from=${$('#wFrom').value}&to=${$('#wTo').value}`; };
@@ -366,6 +387,13 @@ async function loadRuns() {
   $$('#runList [data-id]').forEach(li => li.onclick = async () => { const r = await api('/runs/' + li.dataset.id); alert(r.log || 'Không có nhật ký'); });
 }
 
+// Dòng "Tự động cập nhật vào … giờ Na Uy" theo giờ hẹn trong Cài đặt
+function showAutoNote(hour) {
+  const h = Number.isFinite(Number(hour)) ? Number(hour) : 8;
+  const part = h < 11 ? 'sáng' : h < 13 ? 'trưa' : h < 18 ? 'chiều' : 'tối';
+  $('#autoNote').textContent = `Tự động cập nhật vào ${h}:00 ${part} giờ Na Uy`;
+}
+
 // ---------- Khởi động ----------
 async function boot() {
   const me = await api('/me').catch(() => null);
@@ -373,6 +401,7 @@ async function boot() {
   if (!me.loggedIn) return showLogin();
   $('#app').hidden = false;
   state.today = me.today; state.calMonth = me.today.slice(0, 7);
+  showAutoNote(me.dailyHour);
   await setDate(me.today);
   const v = location.hash.slice(1);
   if (['topic', 'search', 'settings'].includes(v)) go(v);

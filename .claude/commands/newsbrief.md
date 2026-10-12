@@ -17,4 +17,4 @@ Bạn đang làm việc cho ứng dụng NewsBrief (bản tin đối ngoại c�
    - `MORE_JOBS`: quay lại bước 1.
    - Nếu có dòng "Lỗi", sửa đúng phần tử bị lỗi ở vòng sau (server vẫn giữ việc đó trong hàng đợi).
 
-Không sửa mã nguồn, không commit, không đọc hay in nội dung file `.newsbrief-agent.env`.
+Không sửa mã nguồn, không commit, không đọc hay in token (biến NEWSBRIEF_AGENT_TOKEN hoặc file `.newsbrief-agent.env`).

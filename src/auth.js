@@ -27,11 +27,12 @@ function requireReadonlyToken(req, res, next) {
   return res.status(401).json({ error: 'Token không hợp lệ' });
 }
 
-function requireAgentToken(req, res, next) {
+async function requireAgentToken(req, res, next) {
   const h = req.headers.authorization || '';
   const t = h.startsWith('Bearer ') ? h.slice(7) : '';
-  if (config.agentToken && t && safeEq(t, config.agentToken)) return next();
-  return res.status(401).json({ error: 'Token không hợp lệ (AGENT_API_TOKEN)' });
+  const cur = await require('./db').getAgentToken().catch(() => null);
+  if (cur && t && safeEq(t, cur.token)) return next();
+  return res.status(401).json({ error: 'Token không khớp. Vào Cài đặt → Chế độ xử lý tin → "Lệnh cài cho máy chạy Claude" để lấy lệnh mới.' });
 }
 
 module.exports = { COOKIE, makeToken, verify, safeEq, requireLogin, requireReadonlyToken, requireAgentToken };
