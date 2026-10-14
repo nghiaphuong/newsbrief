@@ -3,7 +3,7 @@
 Ứng dụng Node.js + MySQL tự động tìm, sàng lọc, dịch và tóm tắt tin tức tiếng Anh và tiếng Na Uy phục vụ công tác nghiên cứu, báo cáo tại Đại sứ quán Việt Nam tại Na Uy.
 
 ## Chức năng
-- **Bản tin hằng ngày** lúc 8:00 (giờ Oslo), tối đa 20 tin/ngày (chỉnh được), nút **Cập nhật ngay**.
+- **Bản tin hằng ngày**: nút **Cập nhật ngay**; tùy chọn tự động cập nhật mỗi ngày lúc 8:00 giờ Oslo (Cài đặt, **mặc định tắt**), tối đa 20 tin/ngày (chỉnh được).
 - Nguồn: RSS của báo chí và cơ quan nhà nước Na Uy, báo quốc tế, báo về ASEAN/Việt Nam, kết hợp quét toàn cầu qua GDELT. Bật/tắt/thêm nguồn trong **Cài đặt**.
 - Claude chấm điểm mức liên quan (chế độ 1, 2; chế độ miễn phí dùng từ khóa) theo thứ tự ưu tiên: Na Uy–Việt Nam → Na Uy–ASEAN → chính trị/đối ngoại → kinh tế (chính sách, đầu tư, thương mại, doanh nghiệp) → văn hóa–xã hội.
 - Mỗi bài: nguyên văn, **tin A**, **bảng số liệu kèm nguồn**, link bài gốc; nút sao chép từng phần.

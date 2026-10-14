@@ -11,6 +11,7 @@ const MAX_FAILED_RUNS_PER_DAY = 3; // tránh chạy lại vô hạn (tốn chi p
 
 async function dailyDue() {
   const s = await getSettings();
+  if (s.daily_auto !== '1') return false; // tự động cập nhật hằng ngày đang tắt (mặc định)
   const hour = parseInt(s.daily_hour || '8', 10);
   if (osloHour() < hour) return false;
   const [r] = await q(`SELECT SUM(status IN ('done','running')) ok, SUM(status = 'error') failed FROM runs

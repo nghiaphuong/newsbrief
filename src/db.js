@@ -21,6 +21,7 @@ async function q(sql, params = []) {
 const DEFAULT_SETTINGS = {
   articles_per_day: '20',
   daily_hour: '8',
+  daily_auto: '0', // '1' = tự động cập nhật bản tin mỗi ngày; mặc định tắt (chỉ cập nhật khi bấm "Cập nhật ngay")
   min_relevance: '45',
   weekly_enabled: '1',
   weekly_to: config.weeklyTo,

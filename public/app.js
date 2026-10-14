@@ -5,7 +5,7 @@ const CATS = ['chinh-tri', 'kinh-te', 'van-hoa-xa-hoi'];
 const catLabel = c => (CATS.includes(c) ? t('cat.' + c) : '');
 const isMobile = () => matchMedia('(max-width: 820px)').matches;
 
-const state = { today: null, date: null, cat: '', dayItems: [], calMonth: null, range: 'week', selected: null, selectedPane: '#reader', runTimer: null, dailyHour: 8 };
+const state = { today: null, date: null, cat: '', dayItems: [], calMonth: null, range: 'week', selected: null, selectedPane: '#reader', runTimer: null, dailyHour: 8, dailyAuto: false };
 
 async function api(path, opts = {}) {
   const res = await fetch('/api' + path, { headers: { 'Content-Type': 'application/json', 'X-Lang': LANG }, credentials: 'same-origin', ...opts, body: opts.body ? JSON.stringify(opts.body) : undefined });
@@ -141,7 +141,7 @@ async function loadDay(opts = {}) {
 function renderList(el, items, readerSel) {
   if (!items.length) {
     el.innerHTML = readerSel === '#reader'
-      ? `<li class="empty"><strong>${esc(t('day.emptyTitle'))}</strong>${esc(t('day.emptyBody', { hour: state.dailyHour }) + (state.admin ? t('day.emptyAdmin') : ''))}</li>`
+      ? `<li class="empty"><strong>${esc(t('day.emptyTitle'))}</strong>${esc((state.dailyAuto ? t('day.emptyBody', { hour: state.dailyHour }) : t('day.emptyBodyOff')) + (state.admin ? t('day.emptyAdmin') : ''))}</li>`
       : `<li class="empty"><strong>${esc(t('search.emptyTitle'))}</strong>${esc(t('search.emptyBody'))}</li>`;
     return;
   }
@@ -350,7 +350,7 @@ async function loadSettings() {
   const u = s.translate_usage;
   const reset = u ? new Intl.DateTimeFormat(LOCALE(), { timeZone: 'Europe/Oslo', dateStyle: 'short', timeStyle: 'short' }).format(new Date(u.resetAt)) : '';
   $('#stUsage').textContent = u ? t('usage.line', { period: u.period, used: num(u.used), limit: num(u.limit), reset }) : '';
-  $('#stN').value = s.articles_per_day; $('#stHour').value = s.daily_hour; $('#stMin').value = s.min_relevance;
+  $('#stN').value = s.articles_per_day; $('#stHour').value = s.daily_hour; $('#stAuto').checked = s.daily_auto === '1'; $('#stMin').value = s.min_relevance;
   $('#stPublic').checked = s.public_access !== '0';
   $('#stPublicWarn').hidden = !!(s.env && s.env.appPassword);
   $('#stMail').value = s.weekly_to; $('#stWeekly').checked = s.weekly_enabled === '1'; $('#stSamples').value = s.tin_a_samples || '';
@@ -370,8 +370,9 @@ function showEnvHints() {
 $('#settingsForm').addEventListener('submit', async e => {
   e.preventDefault();
   const mode = $('#stMode input[name="ai_mode"]:checked')?.value || 'api';
-  await api('/settings', { method: 'PUT', body: { ai_mode: mode, public_access: $('#stPublic').checked ? '1' : '0', articles_per_day: $('#stN').value, daily_hour: $('#stHour').value, min_relevance: $('#stMin').value, weekly_to: $('#stMail').value, weekly_enabled: $('#stWeekly').checked ? '1' : '0', tin_a_samples: $('#stSamples').value } });
+  await api('/settings', { method: 'PUT', body: { ai_mode: mode, public_access: $('#stPublic').checked ? '1' : '0', articles_per_day: $('#stN').value, daily_hour: $('#stHour').value, daily_auto: $('#stAuto').checked ? '1' : '0', min_relevance: $('#stMin').value, weekly_to: $('#stMail').value, weekly_enabled: $('#stWeekly').checked ? '1' : '0', tin_a_samples: $('#stSamples').value } });
   state.mode = mode; state.publicAccess = $('#stPublic').checked;
+  state.dailyAuto = $('#stAuto').checked;
   showAutoNote($('#stHour').value);
   $('#stSaved').textContent = t('st.saved'); setTimeout(() => $('#stSaved').textContent = '', 2500);
 });
@@ -416,7 +417,7 @@ function showAutoNote(hour) {
   } else {
     time = `${h}:00 ${t(h < 11 ? 'time.morning' : h < 13 ? 'time.noon' : h < 18 ? 'time.afternoon' : 'time.evening')}`;
   }
-  $('#autoNote').textContent = t('day.autoNote', { time });
+  $('#autoNote').textContent = state.dailyAuto ? t('day.autoNote', { time }) : t('day.autoOff');
 }
 
 // ---------- Khởi động ----------
@@ -432,6 +433,7 @@ async function boot() {
   $('#login').hidden = true;
   $('#app').hidden = false;
   state.today = me.today; state.calMonth = me.today.slice(0, 7);
+  state.dailyAuto = !!me.dailyAuto;
   showAutoNote(me.dailyHour);
   await setDate(me.today);
   const v = location.hash.slice(1);

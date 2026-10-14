@@ -33,13 +33,13 @@ r.post('/logout', (req, res) => { res.clearCookie(auth.COOKIE); res.json({ ok: t
 const PUBLIC_GET = [/^\/articles$/, /^\/articles\/\d+$/, /^\/articles\/\d+\/translate$/, /^\/calendar$/, /^\/digest\/daily$/, /^\/digests$/, /^\/digests\/\d+$/, /^\/run\/status$/];
 const isAdmin = req => !config.appPassword || auth.verify(req.cookies[auth.COOKIE]);
 // Lỗi CSDL không được làm trang trắng: coi như công khai (mặc định) và 8 giờ.
-const viewSettings = () => getSettings().then(s => ({ publicAccess: s.public_access !== '0', dailyHour: parseInt(s.daily_hour || '8', 10) }))
-  .catch(() => ({ publicAccess: true, dailyHour: 8 }));
+const viewSettings = () => getSettings().then(s => ({ publicAccess: s.public_access !== '0', dailyHour: parseInt(s.daily_hour || '8', 10), dailyAuto: s.daily_auto === '1' }))
+  .catch(() => ({ publicAccess: true, dailyHour: 8, dailyAuto: false }));
 
 r.get('/me', wrap(async (req, res) => {
   const admin = isAdmin(req);
-  const { publicAccess, dailyHour } = await viewSettings();
-  res.json({ loggedIn: admin, admin, publicAccess, today: ymd(), dailyHour });
+  const { publicAccess, dailyHour, dailyAuto } = await viewSettings();
+  res.json({ loggedIn: admin, admin, publicAccess, today: ymd(), dailyHour, dailyAuto });
 }));
 
 // ---------- Cron dự phòng (Hostinger Cron Jobs gọi URL này) ----------
@@ -193,8 +193,8 @@ r.post('/weekly/send', wrap(async (req, res) => {
 }));
 
 // ---------- Cài đặt & nguồn ----------
-const EDITABLE = ['articles_per_day', 'daily_hour', 'min_relevance', 'weekly_enabled', 'weekly_to', 'tin_a_samples', 'ai_mode', 'public_access'];
-const ALLOWED = { ai_mode: ['api', 'claude_plan', 'free'], public_access: ['0', '1'] };
+const EDITABLE = ['articles_per_day', 'daily_hour', 'min_relevance', 'weekly_enabled', 'weekly_to', 'tin_a_samples', 'ai_mode', 'public_access', 'daily_auto'];
+const ALLOWED = { ai_mode: ['api', 'claude_plan', 'free'], public_access: ['0', '1'], daily_auto: ['0', '1'] };
 // Kèm cho giao diện biết khóa nào đã đặt trong biến môi trường (không trả giá trị khóa) và hạn mức Google đã dùng.
 const withEnv = async s => ({
   ...s,
