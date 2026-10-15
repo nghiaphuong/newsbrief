@@ -141,7 +141,7 @@ async function loadDay(opts = {}) {
 function renderList(el, items, readerSel) {
   if (!items.length) {
     el.innerHTML = readerSel === '#reader'
-      ? `<li class="empty"><strong>${esc(t('day.emptyTitle'))}</strong>${esc((state.dailyAuto ? t('day.emptyBody', { hour: state.dailyHour }) : t('day.emptyBodyOff')) + (state.admin ? t('day.emptyAdmin') : ''))}</li>`
+      ? `<li class="empty"><strong>${esc(t('day.emptyTitle'))}</strong>${esc((state.dailyAuto ? t('day.emptyBody', { hour: state.dailyHour }) : t('day.emptyBodyOff')) + t('day.emptyAdmin'))}</li>`
       : `<li class="empty"><strong>${esc(t('search.emptyTitle'))}</strong>${esc(t('search.emptyBody'))}</li>`;
     return;
   }
@@ -264,7 +264,10 @@ $$('#dayFilters .chip').forEach(c => c.onclick = () => {
 
 // Cập nhật ngay + theo dõi tiến độ
 $('#runBtn').onclick = async () => {
-  try { await api('/run', { method: 'POST', body: { date: state.date === state.today ? undefined : state.date } }); toast(t('run.started')); pollRun(); }
+  // Khách luôn cập nhật hôm nay (server tự giới hạn số lượt); quản trị cập nhật ngày đang xem.
+  const date = state.admin && state.date !== state.today ? state.date : undefined;
+  if (!state.admin && state.date !== state.today) await setDate(state.today);
+  try { await api('/run', { method: 'POST', body: { date } }); toast(t('run.started')); pollRun(); }
   catch (err) { toast(err.message); pollRun(); }
 };
 async function pollRun() {
@@ -402,7 +405,7 @@ $('#srcForm').addEventListener('submit', async e => {
 async function loadRuns() {
   const rows = await api('/runs');
   $('#runList').innerHTML = rows.map(r => { const s = typeof r.stats === 'string' ? JSON.parse(r.stats || '{}') : (r.stats || {});
-    return `<li data-id="${r.id}"><span>${r.status === 'done' ? '✓' : r.status === 'error' ? '✗' : '…'} ${vi(r.started_at)} ${String(r.started_at).slice(11, 16)} · ${esc(t(r.trigger_by === 'manual' ? 'runs.manual' : 'runs.auto'))}</span><small>${esc(t('runs.stats', { processed: s.processed ?? 0, candidates: s.candidates ?? 0 }) + (s.errors ? t('runs.errors', { n: s.errors }) : '') + (s.queued ? t('runs.queued', { n: s.queued }) : ''))}</small></li>`; }).join('') || `<li class="empty">${esc(t('runs.none'))}</li>`;
+    return `<li data-id="${r.id}"><span>${r.status === 'done' ? '✓' : r.status === 'error' ? '✗' : '…'} ${vi(r.started_at)} ${String(r.started_at).slice(11, 16)} · ${esc(t(r.trigger_by === 'manual' ? 'runs.manual' : r.trigger_by === 'guest' ? 'runs.guest' : 'runs.auto'))}</span><small>${esc(t('runs.stats', { processed: s.processed ?? 0, candidates: s.candidates ?? 0 }) + (s.errors ? t('runs.errors', { n: s.errors }) : '') + (s.queued ? t('runs.queued', { n: s.queued }) : ''))}</small></li>`; }).join('') || `<li class="empty">${esc(t('runs.none'))}</li>`;
   $$('#runList [data-id]').forEach(li => li.onclick = async () => { const r = await api('/runs/' + li.dataset.id); alert(r.log || t('runs.noLog')); });
 }
 

@@ -29,8 +29,12 @@ r.post('/login', (req, res) => {
 });
 r.post('/logout', (req, res) => { res.clearCookie(auth.COOKIE); res.json({ ok: true }); });
 // Chế độ công khai (mặc định, Cài đặt → "Cho phép xem không cần đăng nhập"): khách chỉ được các yêu cầu GET
-// đọc dữ liệu dưới đây; mọi thao tác tốn phí hoặc thay đổi dữ liệu (cập nhật, dịch, tổng hợp, cài đặt, xóa) vẫn cần đăng nhập.
+// đọc dữ liệu dưới đây và nút "Cập nhật ngay" (có giới hạn, xem POST /run); các thao tác khác (dịch, tổng hợp,
+// cài đặt, xóa) vẫn cần đăng nhập.
 const PUBLIC_GET = [/^\/articles$/, /^\/articles\/\d+$/, /^\/articles\/\d+\/translate$/, /^\/calendar$/, /^\/digest\/daily$/, /^\/digests$/, /^\/digests\/\d+$/, /^\/run\/status$/];
+const PUBLIC_POST = [/^\/run$/];
+const GUEST_RUN_MAX_PER_DAY = 3;
+const GUEST_RUN_COOLDOWN_MIN = 30;
 const isAdmin = req => !config.appPassword || auth.verify(req.cookies[auth.COOKIE]);
 // Lỗi CSDL không được làm trang trắng: coi như công khai (mặc định) và 8 giờ.
 const viewSettings = () => getSettings().then(s => ({ publicAccess: s.public_access !== '0', dailyHour: parseInt(s.daily_hour || '8', 10), dailyAuto: s.daily_auto === '1' }))
@@ -96,7 +100,8 @@ r.use('/agent', agentApi);
 // ---------- Từ đây trở xuống: quản trị cần đăng nhập; khách xem được phần đọc nếu bật chế độ công khai ----------
 r.use((req, res, next) => {
   if (isAdmin(req)) return next();
-  if (req.method !== 'GET' || !PUBLIC_GET.some(p => p.test(req.path))) return res.status(401).json({ error: L(req, 'Chưa đăng nhập', 'Not signed in') });
+  const allowed = req.method === 'GET' ? PUBLIC_GET : req.method === 'POST' ? PUBLIC_POST : [];
+  if (!allowed.some(p => p.test(req.path))) return res.status(401).json({ error: L(req, 'Chưa đăng nhập', 'Not signed in') });
   viewSettings().then(v => (v.publicAccess ? next() : res.status(401).json({ error: L(req, 'Chưa đăng nhập', 'Not signed in') })));
 });
 
@@ -157,7 +162,25 @@ r.post('/digest/daily', wrap(async (req, res) => {
 // ---------- Chạy cập nhật ----------
 r.post('/run', wrap(async (req, res) => {
   if (pipeline.status().running) return res.status(409).json({ error: L(req, 'Đang cập nhật…', 'An update is already running…'), status: pipeline.status() });
-  pipeline.runDaily('manual', { limit: req.body.limit, date: req.body.date }).catch(e => console.error('Manual run:', e.message));
+  const admin = isAdmin(req);
+  if (!admin) {
+    // Khách: chỉ cập nhật hôm nay, cách nhau ít nhất 30 phút, tối đa 3 lượt/ngày (quản trị không giới hạn).
+    const [g] = await q(`SELECT COUNT(*) n, TIMESTAMPDIFF(MINUTE, MAX(started_at), NOW()) ago FROM runs
+        WHERE kind = 'daily' AND trigger_by = 'guest' AND DATE(started_at) = ?`, [ymd()]);
+    if (Number(g.n) >= GUEST_RUN_MAX_PER_DAY) {
+      return res.status(429).json({ error: L(req,
+        `Hôm nay khách đã cập nhật đủ ${GUEST_RUN_MAX_PER_DAY} lần. Vui lòng quay lại ngày mai hoặc đăng nhập quản trị.`,
+        `Visitors have used all ${GUEST_RUN_MAX_PER_DAY} updates for today. Please come back tomorrow or sign in as admin.`) });
+    }
+    if (g.ago !== null && Number(g.ago) < GUEST_RUN_COOLDOWN_MIN) {
+      const wait = GUEST_RUN_COOLDOWN_MIN - Number(g.ago);
+      return res.status(429).json({ error: L(req,
+        `Bản tin vừa được cập nhật cách đây ${g.ago} phút. Vui lòng thử lại sau ${wait} phút.`,
+        `The brief was updated ${g.ago} min ago. Please try again in ${wait} min.`) });
+    }
+  }
+  const opts = admin ? { limit: req.body.limit, date: req.body.date } : {}; // khách: luôn là hôm nay, số tin theo Cài đặt
+  pipeline.runDaily(admin ? 'manual' : 'guest', opts).catch(e => console.error('Manual run:', e.message));
   setTimeout(() => res.json({ ok: true, status: pipeline.status() }), 300);
 }));
 r.get('/run/status', (req, res) => res.json(pipeline.status()));

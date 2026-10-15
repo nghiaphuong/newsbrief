@@ -3,7 +3,7 @@
 Ứng dụng Node.js + MySQL tự động tìm, sàng lọc, dịch và tóm tắt tin tức tiếng Anh và tiếng Na Uy phục vụ công tác nghiên cứu, báo cáo tại Đại sứ quán Việt Nam tại Na Uy.
 
 ## Chức năng
-- **Bản tin hằng ngày**: nút **Cập nhật ngay**; tùy chọn tự động cập nhật mỗi ngày lúc 8:00 giờ Oslo (Cài đặt, **mặc định tắt**), tối đa 20 tin/ngày (chỉnh được).
+- **Bản tin hằng ngày**: nút **Cập nhật ngay** cho cả khách và quản trị (khách: chỉ hôm nay, cách nhau ≥30 phút, tối đa 3 lượt/ngày); tùy chọn tự động cập nhật mỗi ngày lúc 8:00 giờ Oslo (Cài đặt, **mặc định tắt**), tối đa 20 tin/ngày (chỉnh được).
 - Nguồn: RSS của báo chí và cơ quan nhà nước Na Uy, báo quốc tế, báo về ASEAN/Việt Nam, kết hợp quét toàn cầu qua GDELT. Bật/tắt/thêm nguồn trong **Cài đặt**.
 - Claude chấm điểm mức liên quan (chế độ 1, 2; chế độ miễn phí dùng từ khóa) theo thứ tự ưu tiên: Na Uy–Việt Nam → Na Uy–ASEAN → chính trị/đối ngoại → kinh tế (chính sách, đầu tư, thương mại, doanh nghiệp) → văn hóa–xã hội.
 - Mỗi bài: nguyên văn, **tin A**, **bảng số liệu kèm nguồn**, link bài gốc; nút sao chép từng phần.
@@ -27,7 +27,7 @@
 - Chỉ dịch/tóm tắt từ văn bản nguồn; không bịa nguồn, không suy diễn.
 - Giữ nguyên mọi số liệu cùng nguồn trích dẫn/dự báo; số liệu được tách riêng để dễ đưa vào báo cáo.
 - Chỉ lấy bài đọc được toàn văn: bỏ qua nguồn thu phí (paywall) và bài chỉ tải được trích đoạn (dưới 1.500 ký tự).
-- Mặc định **xem không cần đăng nhập** (chỉ xem, tìm kiếm, đọc, sao chép); cập nhật, dịch, tổng hợp, cài đặt luôn cần đăng nhập bằng `APP_PASSWORD`. Bỏ chọn "Cho phép xem không cần đăng nhập" trong Cài đặt để bắt buộc đăng nhập. Trang luôn `noindex`.
+- Mặc định **xem không cần đăng nhập** (xem, tìm kiếm, đọc, sao chép và bấm Cập nhật ngay có giới hạn); dịch, tổng hợp, cài đặt luôn cần đăng nhập bằng `APP_PASSWORD`. Bỏ chọn "Cho phép xem không cần đăng nhập" trong Cài đặt để bắt buộc đăng nhập. Trang luôn `noindex`.
 
 ## Triển khai trên Hostinger (Node.js Web App)
 1. hPanel → Databases → tạo database MySQL + user.
